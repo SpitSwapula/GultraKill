@@ -60,7 +60,10 @@ PAC3
 
 Wiremod (ditto)
 
-TF2(optional for alt tracer)
+TF2 (optional for alt tracer)
+
+## If you don't have Team Fortress 2 installed.
+Then change the E2 setting relating to TF2 Trail to the value of zero
 
 # DevConsole Dependencies
 wire_holograms_modelany 1
