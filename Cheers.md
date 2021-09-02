@@ -11,9 +11,9 @@ I want nothing else in the world other than Hakita to continue the most legendar
 Take heed. While I and many others should kneel before you for developing the greatest FPS of a generation, you should be on YOUR knees thanking me for giving you the kind of advice your father probably wasnt around to deliver himself.
 I hope you emerge from your cocoon as a stronger man who can discuss disputes and drive a pursuasive argument to someone. And without the safteynet of a mute/block/ban/kick button granted to you by a sanctum you control.
 
-By having this Git public, I leave the open possibility of people disagreeing with me. The possibility of easily finding this tangent rant. The risk of its deletion, the sabotage of code. Edits. Scathing Feedback. Bad PR for sure. My reputation with friends. Everything.
+By having this Git public, I leave the open possibility of people disagreeing with me. The possibility of easily finding this tangent rant. The risk of its deletion, the sabotage of code. Edits. Scathing Feedback. Bad PR for sure. My reputation with friends. Me going in cringe compilations. A Captioned touch grass meme. Everything.
 
-Its a great risk, but you know what? If someone wants to let me know Im in the wrong. We will have a conversation. Unlike you, even though I have the power to silence anyone who attacks my beliefs, my arguments, this project, and ideas, I wont use said power on them. I will use my words. And that is the biggest takeaway from all of this, Hakita. 
+Its a great risk, but you know what? If someone wants to let me know Im in the wrong. We will have a conversation. Unlike you, even though I have the power to silence anyone who attacks my beliefs, my arguments, this project, and ideas, I wont use said power on them. I will use my words. And that is the biggest takeaway from all of this, Hakita. Just like you. I can choose how this outcome effects my mental health. I can break my feedback loop. Can you?
 
 ### Above all else
 your ability to bring joy to my heart in the form of Ultrakill inspired me to commission these scripts in homage to you. Fuck you. I love you. Unlike YanDev you are a sheltered individual actually capable of putting out the best banger I have ever layed hands on. The best banger ANYONE has layed hands on. And everyone who loved working on these E2s also has you to thank.
