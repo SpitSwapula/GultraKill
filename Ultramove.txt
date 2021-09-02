@@ -1,0 +1,362 @@
+@name Ultrakill Movement v3
+@inputs 
+@outputs SProps:array Stamina Bar
+@persist OM Stamina Sliding Smashing DashMAX [LockedVec DashVec PlayerVelocity PlayerInertia AppliedForces]:vector SProps:array DashTime SmashTime FallTime WallJumps SlamStored
+@trigger 
+
+#note that because of how source movement works, walljumping works best if you hold no movement keys while walljumping
+
+#Goldenflare5643 was here ---> :)
+
+#[
+original base code by katsu (aug 18, 2021)
+
+changes by Goldenflare5643 (sep 1, 2021):
+    -Dashjumping
+    -canceling a slam with a dash
+    -better slam control (you cant move around while falling)
+    -slam bouncing (the longer you fall with a slam if you are holding space when you hit the ground you will bounce higher)
+    -SlamStorage
+    -tweaked a bunch of the values to make the movement more closely resemble ULTRAKILL
+]#
+
+if(first()){ 
+    runOnTick(1)
+    runOnLast(1)
+
+    findIncludeClass("npc")
+    findIncludeClass("player")
+    
+    function void smash(){
+        findInSphere(owner():pos(),300)
+        local InArea = findToArray()
+        
+        for(I=1,InArea:count()){
+            if(InArea[I,entity]:isAlive() & InArea[I,entity] != owner()){
+                local NewHitProp = propSpawn("models/squad/sf_plates/sf_plate2x2.mdl",InArea[I,entity]:toWorld(vec(0,0,-3)),ang(0,0,0),0)
+                NewHitProp:setMass(99999999)
+                NewHitProp:applyForce(vec(0,0,1)*NewHitProp:mass()*3000)
+                NewHitProp:setAlpha(0)
+                NewHitProp:soundPlay(3000 + I,6,"weapons/bumper_car_hit_hard.wav")
+                soundPitch(2000+I,randint(40,70))
+                SProps:pushEntity(NewHitProp)
+                        
+                #ifdef entity:setCollisionGroup(string)
+                    NewHitProp:setCollisionGroup(InArea[I,entity]:getCollisionGroup())
+                #else
+                #endif
+            }
+        }
+        timer("cleanSProps",500)
+    }
+    
+    holoCreate(1)
+    holoModel(1,"models/holograms/hq_torus.mdl")
+    holoColor(1,vec(150,150,150))
+    holoAlpha(1,0)
+    holoAng(1,ang(0,0,0))
+    
+    owner():disableFallDamage()
+    
+    WallJumps = 3
+    Stamina = 100
+    DashMAX = 0.3
+    OM = owner():mass()
+    
+    concmd("pac_event stamina1 0")
+    concmd("pac_event stamina2 0")
+    concmd("pac_event stamina3 0")       
+}
+PlayerVelocity = owner():vel()
+PlayerInertia = owner():inertia()
+
+Time = systime()
+
+if(clk("cleanSProps")){
+    for(I=1,SProps:count()){
+        SProps[I,entity]:propDelete()
+        SProps:remove(I)
+    }
+}
+
+R = rangerOffset(99999999999,owner():pos(),vec(0,0,-10))
+OG      = owner():isOnGround()
+
+KW      = owner():keyForward()
+KA      = owner():keyLeft()
+KS      = owner():keyBack()
+KD      = owner():keyRight()
+KShift  = owner():keySprint()
+KCtrl   = owner():keyDuck()
+KAlt    = owner():keyWalk()
+KSpace  = owner():keyPressed("space")
+KJ      = owner():keyJump() # only returns 1 when not in air (important!)
+
+
+Alive = owner():isAlive()
+
+if(changed(Alive) & Alive){
+    owner():plySetJumpPower(500)    
+}
+
+####################################################
+
+FDT = Time - FallTime
+
+#dash
+
+if(changed(KShift) & KShift & Stamina >= 33 & !Sliding){
+    soundStop("wind")
+    Stamina -= 33
+    Smashing = 0
+    
+    if(OG){
+        owner():plySetPos(owner():pos()+vec(0,0,1))
+    }
+    local EAF = owner():angles():forward()*vec(1,1,0)
+    local EAR = owner():angles():right()*vec(1,1,0)
+            
+    if(KW|KA|KS|KD){
+        DashVec = (KW*EAF + KA*-EAR + KS*-EAF + KD*EAR):normalized()
+    }else{        
+        DashVec = owner():angles():forward()*vec(1,1,0)
+    }
+    
+    owner():soundPlay("dash",DashMAX + 0.1,"ambient/gas/cannister_loop.wav")
+    soundPitch("dash",90)
+    
+
+    
+    DashTime = Time
+}
+
+DDT = Time - DashTime
+
+if(changed(KSpace) & KSpace & !Sliding & KJ & DDT <= DashMAX + 0.2){
+    DashTime = 1
+    DDT = 1
+    owner():plyApplyForce(DashVec*1000 + vec(0, 0, -150))
+}
+if(DDT > DashMAX & DDT <= DashMAX + 0.1){
+    local Up = (DDT - DashMAX)/0.1
+    owner():plyApplyForce(-(PlayerVelocity + PlayerInertia) + DashVec*(2000 - 1500*Up^(1/3)))
+}
+elseif(DDT <= DashMAX){
+    owner():plyApplyForce(-(PlayerVelocity + PlayerInertia) + DashVec*2000)
+}
+
+if(Stamina < 99 & !Sliding){
+    local Remaining = 99 - Stamina
+    local Itr = (Remaining > 0.35) ? 0.35 : Remaining
+    Stamina += Itr
+    
+    Bar = int(Stamina/33)
+    
+    if(changed(Bar)){
+        if($Bar > 0){
+            owner():soundPlay("staminaRegen",1,"buttons/blip1.wav")
+            soundVolume("staminaRegen",0.1)
+            switch(Bar){
+                case 1,
+                    soundPitch("staminaRegen",179)
+                    concmd("pac_event stamina1 1")
+                break
+                
+                case 2,
+                    soundPitch("staminaRegen",193)
+                    concmd("pac_event stamina2 1")
+                break  
+    
+                case 3,
+                    soundPitch("staminaRegen",211)
+                    concmd("pac_event stamina3 1")
+                break          
+            }
+        }else{
+            switch(Bar){
+                case 0,
+                    concmd("pac_event stamina1 0")           
+                break
+                
+                case 1,
+                    concmd("pac_event stamina2 0")
+                break
+                
+                case 2,           
+                    concmd("pac_event stamina3 0")
+                break           
+            }            
+        }
+    }
+}
+
+###################################################################
+#wall jump
+
+
+if(changed(KSpace) & KSpace){
+    if(Sliding){
+        #slide cancel
+
+        Sliding = 0
+        owner():plyApplyForce(LockedVec*850 + vec(0, 0, -150))
+        
+        owner():soundPlay("jump",3,"npc/dog/dog_pneumatic"+randint(1,2)+".wav")
+        soundPitch("jump",90)
+    }elseif(!KJ){
+        #wall jump
+        
+        local EndVec = vec(0,0,0)
+        
+        for(I=1,8){
+            local CurrVec = ang(0,(360/8)*I,0):forward()
+            rangerFilter(owner())
+            local WCR = rangerOffset(40,owner():pos()+vec(0,0,30),CurrVec)
+            
+            if(WCR:hit()){
+                EndVec = EndVec + WCR:hitNormal()
+                if(Smashing){
+                    SlamStored = 1
+                }
+            }
+        }
+        
+        
+        if(EndVec != vec(0,0,0) & WallJumps > 0){
+            EndVec = (EndVec * vec(1,1,0)):normalized()
+            owner():plyApplyForce(-(PlayerVelocity + PlayerInertia) + vec(0,0,400) + EndVec*400)
+            
+            owner():soundPlay("jump",3,"npc/dog/dog_pneumatic"+randint(1,2)+".wav")
+            soundPitch("jump",90)
+            WallJumps--
+            
+            if(WallJumps <= 0){
+                owner():soundPlay("lastjump",3,"buttons/combine_button_locked.wav")
+            }
+        }
+    }
+}
+
+if(changed(KJ) & KJ){
+    #ground jump
+    
+    Sliding = 0 #just in case
+    
+    owner():soundPlay("jump",3,"npc/dog/dog_pneumatic"+randint(1,2)+".wav")
+    soundPitch("jump",90)
+}
+
+if(OG){
+    WallJumps = 3
+}
+
+##################################################
+# slide n ground pound
+
+if(changed(KCtrl)){
+    if(KJ | OG){
+        if(KCtrl){
+            Sliding = 1
+        }else{
+            Sliding = 0
+        }
+    }else{
+        if(KCtrl){
+            Sliding = 0
+            Smashing = 1
+            FallTime = Time
+            owner():soundPlay("wind",0,"coast.windmill")
+        }else{
+            Sliding = 0
+        }            
+    }
+}
+
+if(changed(Sliding)){
+    if(Sliding){
+        concmd("pac_event slide 1")
+        owner():plySetGravity(0)
+        owner():soundPlay("slide",0,"physics/concrete/concrete_scrape_smooth_loop1.wav")
+        soundPitch("slide",111)
+        
+        local EAF = owner():eyeAngles():forward()*vec(1,1,0)
+        local EAR = owner():eyeAngles():right()*vec(1,1,0)
+        
+        if(KW|KA|KS|KD){
+            LockedVec = (KW*EAF + KA*-EAR + KS*-EAF + KD*EAR):normalized()
+        }else{
+            LockedVec = owner():eyeAngles():forward()*vec(1,1,0)
+        }
+    }elseif(!first()){
+        owner():soundPlay("stopSlide",0.08,"buttons/lever4.wav")
+        soundPitch("stopSlide",82)
+        soundVolume("stopSlide",0.5)
+        concmd("pac_event slide 0")
+        owner():plySetGravity(600)
+        soundStop("slide")
+        LockedVec = vec(0,0,0)  
+    }
+}
+
+if(Sliding){    
+    rangerFilter(owner())
+    local NearGround = R:distance() < 10
+    
+    if(changed(NearGround)){
+        if(NearGround){
+            owner():plySetGravity(0)            
+        }else{
+            owner():plySetGravity(600)                
+        }
+    }
+    local Speed = NearGround ? 850 : 700
+    owner():plyApplyForce(-vec(PlayerVelocity[0] + PlayerInertia[0], PlayerVelocity[2] + PlayerInertia[2], 0) + (LockedVec * Speed))        
+}
+
+if(Smashing){
+    if(!SlamStored){
+        owner():plyApplyForce(-(PlayerVelocity + PlayerInertia) + vec(0,0,-3500))
+    }
+    if(OG){
+        if(KSpace){
+            owner():plyApplyForce(-(PlayerVelocity + PlayerInertia) + vec(0, 0, (FDT * 3500)))
+        }
+        owner():soundPlay("smash",2,"physics/metal/metal_barrel_impact_hard6.wav")
+        owner():soundPlay("smash2",3,"physics/metal/metal_barrel_impact_hard3.wav")
+        soundStop("wind")
+        soundPitch("smash2",50)
+        
+        smash()
+        
+        SmashTime = Time
+        Smashing = 0
+        SlamStored = 0
+        
+        #Stamina = clamp(Stamina - 66,0,99) breaks hud, do not use
+        
+        holoPos(1,owner():pos())
+    }    
+}
+
+### spot for smashjump??
+
+SDT = Time - SmashTime
+if(SDT < 1){
+    local Up = SDT
+    local Dampen = Up ^ (1/3)
+    holoAlpha(1,150*(1-Up))
+    holoScale(1,vec(30*Dampen,30*Dampen,10))
+}else{
+    holoScale(1,vec(0,0,10))
+    holoAlpha(1,0)
+}
+
+
+##############################################################
+
+if(last()){
+    owner():plySetGravity(600)
+    owner():plySetJumpPower(200)
+    concmd("pac_event slide 0")
+}
+
