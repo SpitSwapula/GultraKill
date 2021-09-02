@@ -127,7 +127,7 @@ For creating the PAC HUD, Slide animation, Viewmodel and providing valuable inpu
 For creating the flick anim in the PAC's first person viewmodel. It looks beautiful. I fucking love it and I know others will too.
 
 
-## Omni, Gamerweed69, 'Gunt Master', RadioJackal, 'FaZe 360 = Disconnect', Sealife, Taursen and many others.
+### Omni, Gamerweed69, 'Gunt Master', RadioJackal, 'FaZe 360 = Disconnect', Sealife, Taursen and many others.
 For inspiring me, supporting this project, offering valued input, playtesting the scripts, and contributing minor tweaks where needed along the way.
 You were as appart of this 8 month and running journey as everyone else here.
 Thank the Fuck out of you <3 
