@@ -103,7 +103,7 @@ Dash Hopping can be performed by jumping mid-dash, sending you a great distance.
 ## Katsu
 For making basically all of this possible. Thank you for making the awsome holos, algebraic hit detection, fundamental damaging method both in bottled form and antcore, chaining, countering, and grazing functions.
 You have also done a wonderful job making the sliding function, stamina, walljumps, and dashing.
-This E2 is basically your baby. And as such you have raised it right by protecting it from bad influences, and have hardlocked certain variables so skids cant abuse them.
+This E2 is basically your baby. And as such you have raised it right by protecting it from bad influences, and have hardlocked certain variables so skids cant abuse them. You have honestly thought of quite genius solutions to the way this can damage a player and impressed the hell out of others working on this.
 
 ## Anane
 For being the first person to accept the challenge of making this E2. I still appreciate you even though the furthest youve gotten was the initial coin holo and throwing arc. You practically built the foundation Katsu would build upon before he even knew what Ultrakill was. You have no idea how much it means to me that you and Katsu helped make not only MY dream come true nearly a year ago, but unknowingly layed the building blocks of a project many players will come to love.
