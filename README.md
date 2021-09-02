@@ -19,6 +19,8 @@ Same for Ultramove.txt
 
 But put V1PAC3 into the pac3 folder    Steam/Steamapps/Common/GrarrysMod/garrysmod/data/pac3
 
+Cheers.md is irrelevant.
+
 # Intallation Explained
 First make sure you have Wiremod, Plycore, Antcore and Nexuscore installed through the workshop.
 
