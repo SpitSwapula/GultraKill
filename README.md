@@ -1,7 +1,7 @@
 # Distribution Release
 A combined repository of Ultracoin, Ultramove, and the accompanying PAC3 for Garry's Mod.
 
-These Expression2 Scripts port Ultrakill's Marksman/coinshot ability to Garry's Mod
+These Expression2 Scripts port Ultrakill's Marksman/coinshot ability to Garry's Mod as well as the movement tech.
 
 Clicking 2 separate tabs of Github is too hard for most retards, so I put everything in one place.
 
