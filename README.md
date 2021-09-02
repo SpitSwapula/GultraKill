@@ -3,7 +3,7 @@ A combined repository of Ultracoin, Ultramove, and the accompanying PAC3 for Gar
 
 These Expression2 Scripts port Ultrakill's Marksman/coinshot ability to Garry's Mod as well as the movement tech.
 
-Clicking 2 separate tabs of Github is too hard for most retards, so I put everything in one place.
+Clicking 2 separate tabs of Github is too hard for some of the people ive met, so I put everything in one place.
 
 # The PAC3
 provides sliding animation, viewmodel, and HUD. And works in tandem with the E2s.
