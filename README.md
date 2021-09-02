@@ -89,7 +89,6 @@ Add players to blacklist and whitelist so you can choose who is targetted.
 
 Coins can be punted with Gravity Gun for extra range
 
-################################################################################################################################
 
 Ultramove:
 
