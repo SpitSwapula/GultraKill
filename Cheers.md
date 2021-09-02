@@ -11,7 +11,7 @@ I want nothing else in the world other than Hakita to continue the most legendar
 Take heed. While I and many others should kneel before you for developing the greatest FPS of a generation, you should be on YOUR knees thanking me for giving you the kind of advice your father probably wasnt around to deliver himself.
 I hope you emerge from your cocoon as a stronger man who can discuss disputes and drive a pursuasive argument to someone. And without the safteynet of a mute/block/ban/kick button granted to you by a sanctum you control.
 
-By having this Git public, I leave the open possibility of people disagreeing with me. The possibility of easily finding this tangent rant. The risk of its deletion, the sabotage of code. Edits. Everything.
+By having this Git public, I leave the open possibility of people disagreeing with me. The possibility of easily finding this tangent rant. The risk of its deletion, the sabotage of code. Edits. Scathing Feedback. Bad PR for sure. My reputation with friends. Everything.
 
 Its a great risk, but you know what? If someone wants to let me know Im in the wrong. We will have a conversation. Unlike you, even though I have the power to silence anyone who attacks my beliefs, my arguments, this project, and ideas, I wont use said power on them. I will use my words. And that is the biggest takeaway from all of this, Hakita. 
 
