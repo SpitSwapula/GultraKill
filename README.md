@@ -1,7 +1,9 @@
-# GultraKill
-A combined repository of Ultracoin, Ultramove, and the accompanying PAC3 for Garry's Mod. Distribution release.
+# Distribution Release
+A combined repository of Ultracoin, Ultramove, and the accompanying PAC3 for Garry's Mod.
 
 These Expression2 Scripts port Ultrakill's Marksman/coinshot ability to Garry's Mod
+
+Clicking 2 separate tabs of Github is too hard for most retards, so I put everything in one place.
 
 # The PAC3
 provides sliding animation, viewmodel, and HUD. And works in tandem with the E2s.
