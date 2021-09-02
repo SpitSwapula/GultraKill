@@ -12,3 +12,4 @@ I want nothing else in the world other than Hakita to continue the most legendar
 your ability to bring joy to my heart in the form of Ultrakill inspired me to commission these scripts in homage to you. Fuck you. I love you. Unlike YanDev you are a sheltered individual actually capable of putting out the best banger I have ever layed hands on. The best banger ANYONE has layed hands on. And everyone who loved working on these E2s also has you to thank.
 
 Take heed. While I and many others should kneel before you for developing the greatest FPS of a generation, you should be on YOUR knees thanking me for giving you the kind of advice your father probably wasnt around to deliver himself.
+I hope you emerge from your cocoon as a stronger man who can discuss disputes and drive a pursuasive argument to someone. And without the safteynet of a mute/block/ban/kick button granted to you by a sanctum you control.
