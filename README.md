@@ -131,3 +131,10 @@ For creating the flick anim in the PAC's first person viewmodel. It looks beauti
 For inspiring me, supporting this project, offering valued input, playtesting the scripts, and contributing minor tweaks where needed along the way.
 You were as appart of this 8 month and running journey as everyone else here.
 Thank the Fuck out of you <3 
+
+# A Special backhanded thanks:
+To Hakita. Your discord deserves trolls because you are a pathetic noided admin for very few if any good reasons, whom routinely permabans friends of mine for imagined slights against you, and rules so incredibly vague you can break them with a sneeze.
+
+On the other hand Hakita, I love your work, and your game Ultrakill SO GOD DAMN MUCH, that even when you banned me for ping-quoting people and not taking warns for it seriously in a pre-Reply-function age of discord, I still bought 5 of my friends ultrakill, and bought your game myself even though I couldve kept braving the high seas in response.
+
+Above all else - rather than further pursue your rancid guild, your ability to bring joy to my heart in the form of Ultrakill inspired me to commission these scripts in homage to you. Fuck you. I love you. But fuck you.
