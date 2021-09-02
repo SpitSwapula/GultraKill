@@ -110,6 +110,11 @@ Slide Hopping can be performed by starting a slide then jumping shortly after. O
 
 Dash Hopping can be performed by jumping mid-dash, sending you a great distance.
 
+# Advanced Marksman
+The fabled "Orbital" as conceptualized by yours truly, and utilized in practice by HerbMessiah is possible.
+If you throw a coin and are able to punt it with the gravity gun, you can launch the coin to space. Or across Gm_Bigcity for that matter.
+Throwing another coin closer to you and then shooting it will cause a chain to the furthest coin and completely meme someone from a range and angle they had no chance at predicting.
+
 # Credits:
 ## Katsu
 For making basically all of this possible. Thank you for making the awsome holos, algebraic hit detection, fundamental damaging method both in bottled form and antcore, chaining, countering, and grazing functions.
