@@ -83,6 +83,10 @@ Right click when holding 357 to toss coin, up to 4 times. After a slight delay, 
 
 If someone else chucked a coin, shoot it before they can to totally meme them.
 
+THE MORE COINS CHAINED, THE HIGHER THE END DAMAGE.
+
+So while throwing more coins will guarentee a kill most of the time, having a big cluster of coins in the air is easier for opponents to shoot and make all that damage go to you.
+
 Coins will recharge over time and you will receive a notification.
 
 Add players to blacklist and whitelist so you can choose who is targetted.
