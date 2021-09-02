@@ -1,18 +1,10 @@
 # GultraKill
 A combined repository of Ultracoin, Ultramove, and the accompanying PAC3 for Garry's Mod. Distribution release.
 
-# Ultracoin
-An Expression2 script that ports Ultrakill's Marksman/coinshot ability to Garry's Mod
+These Expression2 Scripts port Ultrakill's Marksman/coinshot ability to Garry's Mod
 
-An overwhelming majority of this code is written by the lovely Katsu (Especially the beautiful holos and the algebraic functions relating to hit detection and grazing shots. Oh and the entirety of the movement script.)
-
-Slam Storage, Dash Jumping, and Dash rebalance done by GoldenFlare
-
-WhitelistBlacklist, coinpunt tech, and momentum imparted tossing done by the lovely Heckteck
-
-Antispam by Runic
-
-minor miscellanious tweaks to coin values done by the lovely Omni, Myself, Gamerweed69 and GoldenFlare
+# The PAC3
+provides sliding animation, viewmodel, and HUD. And works in tandem with the E2s.
 
 # Installation
 Just clone in, SSH, or pull the zip file.
@@ -104,3 +96,16 @@ Slam Storage can be performed by slamming into a simultaneous walljump, and then
 Slide Hopping can be performed by starting a slide then jumping shortly after. On Sanctuary, looking behind where you are sliding before jumping will yield greater velocity.
 
 Dash Hopping can be performed by jumping mid-dash, sending you a great distance.
+
+# Credits
+An overwhelming majority of this code is written by the lovely Katsu (Especially the beautiful holos and the algebraic functions relating to hit detection and grazing shots. Oh and the entirety of the movement script.)
+
+Slam Storage, Dash Jumping, and Dash rebalance done by GoldenFlare
+
+WhitelistBlacklist, coinpunt tech, and momentum imparted tossing done by the lovely Heckteck
+
+Antispam by Runic
+
+minor miscellanious tweaks to coin values done by the lovely Omni, Myself, Gamerweed69 and GoldenFlare
+
+Thank the FUCK out of you <3
