@@ -99,15 +99,5 @@ Slide Hopping can be performed by starting a slide then jumping shortly after. O
 
 Dash Hopping can be performed by jumping mid-dash, sending you a great distance.
 
-# Credits
-An overwhelming majority of this code is written by the lovely Katsu (Especially the beautiful holos and the algebraic functions relating to hit detection and grazing shots. Oh and the entirety of the movement script.)
-
-Slam Storage, Dash Jumping, and Dash rebalance done by GoldenFlare
-
-WhitelistBlacklist, coinpunt tech, and momentum imparted tossing done by the lovely Heckteck
-
-Antispam by Runic
-
-minor miscellanious tweaks to coin values done by the lovely Omni, Myself, Gamerweed69 and GoldenFlare
-
-Thank the FUCK out of you <3
+# Credits:
+## Katsu
