@@ -137,4 +137,4 @@ To Hakita. Your discord deserves trolls because you are a pathetic noided admin 
 
 On the other hand Hakita, I love your work, and your game Ultrakill SO GOD DAMN MUCH, that even when you banned me for ping-quoting people and not taking warns for it seriously in a pre-Reply-function age of discord, I still bought 5 of my friends ultrakill, and bought your game myself even though I couldve kept braving the high seas in response.
 
-Above all else - rather than further pursue your rancid guild, your ability to bring joy to my heart in the form of Ultrakill inspired me to commission these scripts in homage to you. Fuck you. I love you. But fuck you.
+Above all else - rather than further pursue your rancid guild, your ability to bring joy to my heart in the form of Ultrakill inspired me to commission these scripts in homage to you. Fuck you. I love you. But fuck you. Unlike YanDev you are a sheltered individual actually capable of putting out the best banger I have ever layed hands on.
