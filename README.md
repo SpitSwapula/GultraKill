@@ -5,6 +5,8 @@ These Expression2 Scripts port Ultrakill's Marksman/coinshot ability to Garry's 
 
 Clicking 2 separate tabs of Github is too hard for some of the people ive met, so I put everything in one place.
 
+Also a single git clone command saves time and keystrokes.
+
 # The PAC3
 provides sliding animation, viewmodel, and HUD. And works in tandem with the E2s.
 
