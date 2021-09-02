@@ -75,9 +75,8 @@ wire_expression2_concmd 1
 
 wire_expression2_extension_enable propcore
 
-# To use
 
-Ultracoin:
+# Ultracoin Usage:
 
 Right click when holding 357 to toss coin, up to 4 times. After a slight delay, you can shoot your coin. Struck coins will target other coins and players.
 
@@ -90,7 +89,7 @@ Add players to blacklist and whitelist so you can choose who is targetted.
 Coins can be punted with Gravity Gun for extra range
 
 
-Ultramove:
+# Ultramove Usage:
 
 Dash with your sprint key up to 3 times before 1 use recharges every 1 second.
 
@@ -98,8 +97,7 @@ Slam by using your crouch key when airborne.
 
 Slide by holding your crouch key while on the ground. You will begin sliding in the direction you are looking if not moving. If moving, you will slide in last held movement direction.
 
-#Advanced Usage
-Ultramove:
+# Advanced Movement
 
 Slam Storage can be performed by slamming into a simultaneous walljump, and then pressing & holding jump key when touching ground. This will throw you into the stratusphere.
 
