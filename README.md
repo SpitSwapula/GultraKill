@@ -19,7 +19,7 @@ Same for Ultramove.txt
 
 But put V1PAC3 into the pac3 folder    Steam/Steamapps/Common/GrarrysMod/garrysmod/data/pac3
 
-Cheers.md is irrelevant.
+UltraNerd is just for if you want to read up on some of the things going on within the script.
 
 # Intallation Explained
 First make sure you have Wiremod, Plycore, Antcore and Nexuscore installed through the workshop.
