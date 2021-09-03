@@ -50,11 +50,12 @@ wire_expression2_concmd 1
 
 The first command allows the new vfx for coinshot to show, the second allows it to even work, and the third allows the movement E2 to play the PAC's sliding animation on your playermodel
 
-# Installation hyper abridged
+# Installation hyper-abridged% speedrun
 
 You literally just open a terminal in the expression2 directory, run a git clone command and forget about it.
 Resync every now and then to get updates.
 V1PAC3 -> pac3
+
 ez
 
 # Dependencies
