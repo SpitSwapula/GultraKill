@@ -1,12 +1,21 @@
-@name Ultrakill Movement v4.1
+@name Ultrakill Movement v4.2
 @inputs 
 @outputs SProps:array Stamina Bar
-@persist OM PlayerSpeed Stamina SlideSpeed SlamSpeed JumpPower Sliding Smashing Slammed DashMAX DashSpeed [LockedVec DashVec PlayerVelocity PlayerInertia AppliedForces]:vector SProps:array DashTime SmashTime FallTime FDT WallJumps SlamStored StoredFall StoredLimit StoredFallTime SFT
-@trigger 
+@persist OM PlayerSpeed Stamina SlideSpeed SlamSpeed JumpPower Sliding Smashing Slammed DashMAX DashSpeed [LockedVec DashVec PlayerVelocity PlayerInertia AppliedForces]:vector SProps:array DashTime SmashTime WallJumps SlamStored FallTime FDT StoredFall StoredLimit StoredFallTime
+@trigger
+
+##############DEV NOTES##############
 #note that because of how source movement works, walljumping works best if you hold no movement keys while walljumping
 
 #Goldenflare5643 was here ---> :)
+#Spit Swapula definitely Swapped Spit with GoldenFlare behind a Wendys in 2006 ~SS
 #DID YOU KNOW, SOMETIMES A VECTORS ADDRESS STARTS AT 1 AND NOT ZERO???????????? ~G
+
+#I need someone to dm me reminding me to make all this stuff function based so its easier to edit... ~G
+
+#Fine, I will...make all this shit function based so its easier to edit... ~SS
+
+#####################################
 
 if(first()){ 
     runOnTick(1)
@@ -61,9 +70,9 @@ if(first()){
     DashMAX = 0.2
     DashSpeed = 2500
     OM = owner():mass()
-    PlayerSpeed = 200
+    PlayerSpeed = 175
     JumpPower = 550
-    SlideSpeed = 500
+    SlideSpeed = 600
     SlamSpeed = 2500
     StoredLimit = 10
     
@@ -137,17 +146,18 @@ if(changed(KShift) & KShift & Stamina >= 33 & !Sliding){
 
 DDT = Time - DashTime
 
-if(changed(KSpace) & KSpace & !Sliding & KJ & DDT <= DashMAX + 0.2){
-    DashTime = 1
+if(changed(KSpace) & KSpace & !Sliding & DDT <= DashMAX + 0.2){
     DDT = 1
-    owner():plyApplyForce(DashVec*DashSpeed / 4 + vec(0, 0, -JumpPower / 3))
+    owner():plyApplyForce(vec(PlayerVelocity[0] + PlayerInertia[0], PlayerVelocity[2] + PlayerInertia[2], 0) + vec(0, 0, (-JumpPower / 3)))
+    owner():soundPlay("jump",3,"npc/dog/dog_pneumatic"+randint(1,2)+".wav")
+    soundPitch("jump",90)
 }
-if(DDT > DashMAX & DDT <= DashMAX + 0.1 + entity():cpuUsage() * 2){
+if(DDT > DashMAX & DDT <= DashMAX + 0.1 + cpuUsage()){ #this thing is bugged, it will never be smooth because the e2 will never run fast enough
     local Up = DDT - DashMAX < 0.1 ? DDT - DashMAX : 0.1
-    owner():plyApplyForce(-(PlayerVelocity + PlayerInertia) + DashVec * (DashSpeed - (DashSpeed * (Up * 10)^2 < DashSpeed * 0.8 ? DashSpeed * (Up * 10)^2 : DashSpeed * 0.8)))
+    owner():plyApplyForce(-(PlayerVelocity + PlayerInertia) + DashVec * (DashSpeed - (DashSpeed * (Up * 10)^2 < DashSpeed * 0.5 ? DashSpeed * (Up * 10)^2 : DashSpeed * 0.8)))
 }
 elseif(DDT <= DashMAX){
-    owner():plyApplyForce(-(PlayerVelocity + PlayerInertia) + DashVec * DashSpeed)
+    owner():plyApplyForce(-(PlayerVelocity + PlayerInertia) + (DashVec * DashSpeed))
 }
 
 #pac3 hud?
@@ -205,18 +215,15 @@ if(changed(PlayerVelocity[3] < 0) & PlayerVelocity[3] < 0){
     FallTime = Time
 }
 if(changed(OG) & OG){
-    StoredFall = StoredFall < StoredLimit ? StoredFall + FDT : StoredLimit
+    FDT = Time - FallTime
+    StoredFall += FDT
     StoredFallTime = Time
 }
-if(DDT > DashMAX + 0.1){
-    FDT = Time - FallTime
-    if(OG){
-        SFT = Time - StoredFallTime
+if(OG & StoredFall > 0 & !Sliding){  #Steadman Slickkkkkkk
+    if(Time - StoredFallTime >= 0.3 & DDT > DashMAX + 0.1){
+        StoredFall = 0
+        Slammed = 0
     }
-}
-if(OG & SFT >= 0.3 & !Sliding){
-    StoredFall = 0
-    Slammed = 0
 }
 
 if(changed(KSpace) & KSpace){
@@ -244,7 +251,6 @@ if(changed(KSpace) & KSpace){
             }
         }
         
-        
         if(EndVec != vec(0,0,0) & WallJumps > 0){
             EndVec = (EndVec * vec(1,1,0)):normalized()
             owner():plyApplyForce(-(PlayerVelocity + PlayerInertia) + vec(0,0,JumpPower * 0.8) + EndVec*400)
@@ -257,7 +263,27 @@ if(changed(KSpace) & KSpace){
             }
         }
     }
-    if(Slammed & !Sliding){
+}elseif(KW|KA|KS|KD){
+    if(!KSpace & !$KSpace & !OG & !Sliding & !Smashing){
+        for(I = 1, 3){
+            local CurrAng = owner():angles()
+            local CurrVec = ang(0, CurrAng[2] + ((360/32)*I) - (360/32) * 2, 0):right()
+            CurrVec = vec(-CurrVec[2], CurrVec[1], 0)
+            local CurVecR = vec(CurrVec[2], -CurrVec[1], 0)
+            CurrVec = (KW*CurrVec + KA*-CurVecR + KS*-CurrVec + KD*CurVecR):normalized()
+            
+            rangerFilter(owner())
+            local WCR = rangerOffset(30,owner():pos()+vec(0,0,30),CurrVec)
+            
+            if(WCR:hit()){
+                owner():plyApplyForce(-(PlayerVelocity + PlayerInertia) / 10)
+                }
+            }
+    }
+}
+
+if(Slammed){
+    if(changed(KSpace) & KSpace & !Sliding){
         owner():plyApplyForce(vec(0, 0, ((StoredFall * SlamSpeed) < JumpPower ? JumpPower : (StoredFall * SlamSpeed + JumpPower / 2 - JumpPower))))
         StoredFall = 0
         Slammed = 0
@@ -330,11 +356,10 @@ if(changed(Sliding)){
         }
         
     }elseif(!first()){
-        owner():soundPlay("stopSlide",0,"physics/metal/metal_canister_impact_hard"+randint(1, 3)+".wav")
-        soundPitch("stopSlide",244)
+        owner():soundPlay("stopSlide",0,"physics/metal/metal_canister_impact_soft2.wav")
+        soundPitch("stopSlide",255)
         soundVolume("stopSlide",0.5)
         concmd("pac_event slide 0")
-        owner():plySetGravity(600)
         soundStop("slide")
         LockedVec = vec(0,0,0)  
     }
@@ -351,7 +376,7 @@ if(Sliding){
             soundVolume("slide", 0)
         }
     #}
-    StoredFall = Slammed ? StoredFall * 100 : StoredFall
+    StoredFall = Slammed ? StoredFall * 6 : StoredFall
     local Speed = (NearGround ? SlideSpeed + 320 : SlideSpeed) + StoredFall * PlayerSpeed
     Slammed = 0
     owner():plyApplyForce(-vec(PlayerVelocity[0] + PlayerInertia[0], PlayerVelocity[2] + PlayerInertia[2], 0) + (LockedVec * Speed))
