@@ -1,16 +1,25 @@
 @name Ultrakill Movement v4.3
 @inputs 
 @outputs SProps:array Stamina Bar
-@persist OM PlayerSpeed Stamina SlideSpeed SlamSpeed JumpPower Sliding Smashing Slammed DashMAX DashSpeed [LockedVec DashVec PlayerVelocity PlayerInertia AppliedForces]:vector SProps:array DashTime SmashTime WallJumps SlamStored FallTime FDT StoredFall StoredLimit StoredFallTime WallCheckDir
+@persist OM PlayerSpeed Stamina SlideSpeed SlamSpeed SlamRadius JumpPower Sliding Smashing Slammed DashMAX DashSpeed [LockedVec DashVec PlayerVelocity PlayerInertia AppliedForces]:vector SProps:array DashTime SmashTime WallJumps SlamStored FallTime FDT StoredFall StoredLimit StoredFallTime WallCheckDir
 @trigger
 
 ##############DEV NOTES##############
 #note that because of how source movement works, walljumping works best if you hold no movement keys while walljumping
 
 #Goldenflare5643 was here ---> :)
-#DID YOU KNOW, SOMETIMES A VECTORS ADDRESS STARTS AT 1 AND NOT ZERO???????????? ~G
+#DID YOU KNOW, SOMETIMES A VECTOR'S ADDRESS'S STARTS AT 1 AND NOT ZERO???????????? ~G
 
 #I need someone to dm me reminding me to make all this stuff function based so its easier to edit... ~G
+
+#1. redo smash()
+#2. make all things functions
+#3. Add parry---> Found = findToArray foreach(K,V:entity = Found:count()){  }
+#4. Bug fix dash and skip
+#5. reflect vectors with new shit r = d - 2(d * n)n
+#6. fix pac slide anim (not here lol)
+#7. setPos on slide
+#8. concmd("impulse 100") when u parry
 
 #####################################
 
@@ -23,30 +32,24 @@ if(first()){
 
     findIncludeClass("npc")
     findIncludeClass("player")
+    findIncludeClass("prop")
     
     owner():propDrag(1)
     
     function void smash(){
-        findInSphere(owner():pos(),300)
+        findInCone(owner():pos() + vec(0, 0, owner():boxSize()[3] * (owner():keyDuck() ? 2 : 1)), vec(0, 0, -1), sqrt(owner():boxSize()[3]^2 + SlamRadius^2), 90 - atan(owner():boxSize()[3], SlamRadius))
         local InArea = findToArray()
         
         for(I=1,InArea:count()){
-            if(InArea[I,entity]:isAlive() & InArea[I,entity] != owner()){
-                local NewHitProp = propSpawn("models/squad/sf_plates/sf_plate2x2.mdl",InArea[I,entity]:toWorld(vec(0,0,-3)),ang(0,0,0),0)
-                NewHitProp:setMass(99999999)
-                NewHitProp:applyForce(vec(0,0,1)*NewHitProp:mass()*3000)
-                NewHitProp:setAlpha(0)
-                NewHitProp:soundPlay(3000 + I,6,"weapons/bumper_car_hit_hard.wav")
-                soundPitch(2000+I,randint(40,70))
-                SProps:pushEntity(NewHitProp)
-                        
-                #ifdef entity:setCollisionGroup(string)
-                    NewHitProp:setCollisionGroup(InArea[I,entity]:getCollisionGroup())
-                #else
-                #endif
+            if(InArea[I,entity] != owner()){
+                if(InArea[I,entity]:type() == "player"){
+                    print("player")
+                    InArea[I,entity]:plyApplyForce(vec(0, 0 , (StoredFall * SlamSpeed * 0.7 + JumpPower)))
+                }else{
+                    InArea[I,entity]:applyForce(vec(0, 0 , (StoredFall * SlamSpeed * 0.7 + JumpPower) * InArea[I,entity]:mass()))
+                }
             }
         }
-        timer("cleanSProps",500)
     }
     
     function void useStoredFall(){
@@ -65,7 +68,8 @@ if(first()){
     WallJumps = 3
     Stamina = 0
     DashMAX = 0.2
-    DashSpeed = 2500
+    DashSpeed = 2000
+    SlamRadius = 200
     OM = owner():mass()
     PlayerSpeed = 200
     JumpPower = 550
@@ -79,13 +83,6 @@ if(first()){
 }
 
 Time = systime()
-
-if(clk("cleanSProps")){
-    for(I=1,SProps:count()){
-        SProps[I,entity]:propDelete()
-        SProps:remove(I)
-    }
-}
 
 R = rangerOffset(99999999999,owner():pos(),vec(0,0,-1))
 OG      = owner():isOnGround() # only returns 1 when not in air (important!)
@@ -151,7 +148,7 @@ if(changed(KSpace) & KSpace & !Sliding & DDT <= DashMAX + 0.2){
 if(DDT > DashMAX & DDT <= DashMAX + 0.1 + cpuUsage()){ #this thing is bugged, it will never be smooth because the e2 will never run fast enough
     local Up = DDT - DashMAX < 0.1 ? DDT - DashMAX : 0.1
     #workaround \/
-    owner():plyApplyForce(-(PlayerVelocity + PlayerInertia) + DashVec * (DashSpeed - (DashSpeed * (Up * 10)^2 < DashSpeed * 0.5 ? DashSpeed * (Up * 10)^2 : DashSpeed * 0.8)))
+    owner():plyApplyForce(-(PlayerVelocity + PlayerInertia) + DashVec * (DashSpeed - (DashSpeed * (Up * 10)^2 < DashSpeed * 0.5 ? DashSpeed * (Up * 10)^2 : DashSpeed * 0.9)))
 }
 elseif(DDT <= DashMAX){
     owner():plyApplyForce(-(PlayerVelocity + PlayerInertia) + (DashVec * DashSpeed))
@@ -251,7 +248,7 @@ if(changed(KSpace) & KSpace){
         
         if(EndVec != vec(0,0,0) & WallJumps > 0){
             EndVec = (EndVec * vec(1,1,0)):normalized()
-            owner():plyApplyForce(-vec(PlayerVelocity[1] + PlayerInertia[1], PlayerVelocity[2] + PlayerInertia[2], clamp(PlayerVelocity[3] + PlayerInertia[3], -JumpPower, (PlayerVelocity[3] + PlayerInertia[3]) * 0.8)) + vec(0,0,JumpPower * 0.8) + EndVec * JumpPower * 0.8)
+            owner():plyApplyForce(-vec(PlayerVelocity[1] + PlayerInertia[1], PlayerVelocity[2] + PlayerInertia[2], clamp(PlayerVelocity[3] + PlayerInertia[3], Smashing ? -SlamSpeed : -JumpPower, (PlayerVelocity[3] + PlayerInertia[3]) * 0.8)) + vec(0,0,JumpPower * 0.8) + EndVec * JumpPower * 0.8)
             owner():soundPlay("jump",3,"npc/dog/dog_pneumatic"+randint(1,2)+".wav")
             soundPitch("jump",90)
             WallJumps--
@@ -277,9 +274,10 @@ if(changed(KSpace) & KSpace){
     }
 }
 
+#BLJ
 if(Slammed){
     if(changed(KSpace) & KSpace & !Sliding){
-        owner():plyApplyForce(vec(0, 0, ((StoredFall * SlamSpeed) < JumpPower ? JumpPower : (StoredFall * SlamSpeed + JumpPower / 2 - JumpPower)))) #blj
+        owner():plyApplyForce(vec(0, 0, StoredFall * SlamSpeed * 0.7))
         StoredFall = 0
         Slammed = 0
     }
@@ -336,7 +334,7 @@ if(changed(Sliding)){
         concmd("pac_event slide 1")
         owner():soundPlay("slide",0,"physics/concrete/concrete_scrape_smooth_loop1.wav")
         soundPitch("slide",111)
-        soundVolume("slide", 0.5)
+        soundVolume("slide", 1)
         
         local EAR = owner():angles():right()*vec(1,1,0)
         local EAF = vec(-EAR[2], EAR[1], 0)
@@ -372,6 +370,7 @@ if(Sliding){
     StoredFall = Slammed ? StoredFall * 6 : StoredFall
     local Speed = (NearGround ? SlideSpeed + 250 : SlideSpeed) + StoredFall * PlayerSpeed
     Slammed = 0
+    owner():setPos(vec(0, 0, 100))
     owner():plyApplyForce(-vec(PlayerVelocity[0] + PlayerInertia[0], PlayerVelocity[2] + PlayerInertia[2], 0) + (LockedVec * Speed) + vec(0, 0, !owner():isUnderWater() ? 0 : -(PlayerVelocity[3] + PlayerInertia[3]) + 170))
     useStoredFall()
 }
@@ -400,11 +399,11 @@ if(Smashing){
 }
 
 SDT = Time - SmashTime
-if(SDT < 1){ #smash holo nice job :)
+if(SDT < 0.6){ #smash holo nice job :)
     local Up = SDT
     local Dampen = Up ^ (1/3)
     holoAlpha(1,150*(1-Up))
-    holoScale(1,vec(30*Dampen,30*Dampen,10))
+    holoScale(1,vec(55*Dampen,55*Dampen,10))
 }else{
     holoScale(1,vec(0,0,10))
     holoAlpha(1,0)
