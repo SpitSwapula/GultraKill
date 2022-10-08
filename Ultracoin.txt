@@ -882,7 +882,7 @@ if(Weapon:type() == Piercer){
                 local REnt = R:entity()
                 if(REnt:isAlive()){
                     #ifdef boom(vector,number,number)
-                        boomCustom("bloodimpact",Victim:pos(),120,10)
+                        boomCustom("bloodimpact",REnt:pos(),120,10)
                     #else
                     #endif
                 }
