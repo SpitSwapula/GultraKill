@@ -1,5 +1,5 @@
 @name UltrakillCoinshot v9 (ricochet) + bonus ultrakill rocket launcher (rocket riding)
-@persist UseTf2Trail LagCompensation TargetNPCS FFA CoinSpeed [Whitelist Blacklist]:table #settings
+@persist UseTf2Trail LagCompensation TargetNPCS FFA CoinSpeed SpS [Whitelist Blacklist]:table #settings
 @persist [Coins UsedCoins]:table LaserHolos:table HC CoinAmmo Tracer WepAmmo GroupName:string AntCore Debug
 @persist [Marksman Piercer FreezeFrame Feedbacker]:string
 @persist PiercerTime PiercerReload
@@ -8,6 +8,8 @@
 
 #commissioned by Spit Swapula (very big ultrakill fan)
 #Written by: Katsu (BUG REPORTS AT gmodcat#9416)
+
+#LOOK THROUGH THE SETTINGS THERE ARE THINGS THAT MAY BE USEFUL TO YOU
 
 Players = players()
 Time = systime()
@@ -71,7 +73,7 @@ if(first()){
     local WhitelistNames = array() 
     local BlacklistNames = array() #no need to add your own name to this, the chip will exclude the owner automatically
 
-    CoinSpeed = 200
+    CoinSpeed = 400 #400 if you use the ultramove e2, 200 if you dont (200 IS DEFAULT GMOD WALKING SPEED)
     #[
     ultrakill's coin is finely tuned to v1's walkspeed
     default gmod walkspeed is 200 u/s
@@ -472,7 +474,7 @@ if(first()){
                 LastPos = CoinPos 
                 
                 #does this coin splitshot?
-                local SplitShot = (abs(CoinZVel) < 24 | CoinAirTime > 1.5) & ShotType == "standard"
+                local SplitShot = (abs(CoinZVel) < SpS | CoinAirTime > 1.5) & ShotType == "standard"
                                 
                 if(SplitShot){
                     HC++
@@ -577,6 +579,8 @@ if(first()){
                 
         HC += 5
     }
+    
+    SpS = 55
 }
 
 ##############################################################
@@ -606,7 +610,7 @@ if(clk("flip")){
     Coin:setMass(1)
     Coin:propDrag(0)
     Coin:propNotSolid(1)
-    Coin:applyForce(owner():vel() + vec(0,0,1) * CoinSpeed + owner():eye() * CoinSpeed)
+    Coin:applyForce(owner():vel() + (vec(0,0,1)*300) + (owner():eye() * CoinSpeed))
     Coin:applyTorque(Coin:owner():eyeAngles():right() * random(-1000, 1000))
     Coin:setAlpha(0)
     
@@ -953,7 +957,7 @@ for(I=1,Coins:count()){
     local CurrCoin = Coins[I,array][1,entity]
     
     local ZVel = CurrCoin:vel():z() - gravity()*LagCompensation #calculate earlier velocity to account for ping
-    local SSW = (abs(ZVel) < 30) 
+    local SSW = (abs(ZVel) < SpS) | (Time - Coins[I,array][2,number]) > 1.5
     if(SSW){
         holoAlpha(Coins[I,array][4,number],255)
     }else{
