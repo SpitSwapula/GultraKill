@@ -90,7 +90,7 @@ if(first()){
        with the line of red holos (how your shot was interpreted by the e2 after lag)
     ]#
     
-    Debug = 1
+    Debug = 0
     #[
     https://i.imgur.com/zyX142y.jpeg <-- GUIDE HERE
     
