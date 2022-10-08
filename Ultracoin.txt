@@ -8,6 +8,7 @@
 Players = players()
 Time = systime()
 Seconds = round(Time,0)
+MS = round(Time,1)
 TickCompensation = tickInterval()*66.6 #dont touch
 
 ######
@@ -89,7 +90,7 @@ if(first()){
        with the line of red holos (how your shot was interpreted by the e2 after lag)
     ]#
     
-    Debug = 0
+    Debug = 1
     #[
     https://i.imgur.com/zyX142y.jpeg <-- GUIDE HERE
     
@@ -413,7 +414,7 @@ if(first()){
         local AlreadyHit = table()
         local LastPos = ShootPos       
         local Bounces = 0
-
+        local IsFirstCoin = 1
         local BeamColor = vec(0,0,0)    
         switch(ShotType){
             case "standard",
@@ -445,7 +446,8 @@ if(first()){
         
         while(1){
             if(Bounces != 0){
-                CoinIndex = nextClosestCoinIndex(LastPos)                
+                CoinIndex = nextClosestCoinIndex(LastPos)
+                IsFirstCoin = 0            
             }
           
             if(CoinIndex){ #process the next coin in the chain if there is one
@@ -478,7 +480,7 @@ if(first()){
                 LastPos = CoinPos 
                 
                 #does this coin splitshot?
-                local SplitShot = (abs(CoinZVel) < SpS | CoinAirTime > 1.5) & ShotType == "standard"
+                local SplitShot = ((IsFirstCoin & (abs(CoinZVel) < SpS)) | CoinAirTime > 1.5) & ShotType == "standard"
                                 
                 if(SplitShot){
                     HC++
@@ -671,7 +673,7 @@ if(Shoot & (Weapon:type() == Marksman | Weapon:type() == Piercer) & !PiercerTime
         #calculate earlier position along perfect object trajectory parabola using kinematics
         local LagCompPos = CurrCoin:pos() - CurrCoin:vel()*LagCompensation - 0.5*vec(0,0,-gravity())*LagCompensation^2
         
-        local RHS = rayHitSphere(owner():shootPos(),owner():eye(),LagCompPos,20)
+        local RHS = rayHitSphere(owner():shootPos(),owner():eye(),LagCompPos,30)
         local Hit = RHS[1,number] & hitScan(owner():shootPos(),RHS[2,vector],array())
         
         if(Hit){
@@ -757,9 +759,10 @@ if(keyClk() & changed(LMB) & LMB & Weapon:type() == Feedbacker){
         
         #calculate earlier position along perfect object trajectory parabola using kinematics
         local LagCompPos = CurrCoin:pos() - CurrCoin:vel()*LagCompensation - 0.5*vec(0,0,-gravity())*LagCompensation^2
+        local OSP = owner():shootPos()
         
-        local RHS = rayHitSphere(owner():shootPos(),owner():eye(),LagCompPos,30)
-        local Hit = RHS[1,number] & hitScan(owner():shootPos(),RHS[2,vector],array()) & (CurrCoin:pos():distance(owner():shootPos()) < 100)
+        local RHS = rayHitSphere(OSP,owner():eye(),LagCompPos,60)
+        local Hit = RHS[1,number] & hitScan(OSP,RHS[2,vector],array()) #& (CurrCoin:pos():distance(OSP) < 130)
         
         if(Hit){
             local CoinOwner = CurrCoin:owner()      
@@ -830,7 +833,7 @@ if(Weapon:type() == Piercer){
                 #calculate earlier position along perfect object trajectory parabola using kinematics
                 local LagCompPos = CurrCoin:pos() - CurrCoin:vel()*LagCompensation - 0.5*vec(0,0,-gravity())*LagCompensation^2
                 
-                local RHS = rayHitSphere(owner():shootPos(),owner():eye(),LagCompPos,20)
+                local RHS = rayHitSphere(owner():shootPos(),owner():eye(),LagCompPos,30)
                 local Hit = RHS[1,number] & hitScan(owner():shootPos(),RHS[2,vector],array())
                 
                 if(Hit){
@@ -972,7 +975,7 @@ for(I=1,Coins:count()){
     rangerFilter(CurrCoin)
     rangerFilter(owner())
     
-    local R = rangerOffset(10,CurrCoin:pos(),vec(0,0,-1))
+    local R = rangerOffset(1,CurrCoin:pos(),vec(0,0,-1))
     if(R:hit()){
         CurrCoin:propDelete()
         Coins:remove(I)
@@ -981,17 +984,19 @@ for(I=1,Coins:count()){
     
 #animate beams
 
-for(I=1,LaserHolos:count()){
-    local DT = LaserHolos[I,array][2,number] - Time
-    
-    if(DT > 0){
-        local Down = DT/0.5
+if(changed(MS)){
+    for(I=1,LaserHolos:count()){
+        local DT = LaserHolos[I,array][2,number] - Time
         
-        holoScale(LaserHolos[I,array][1,number],vec(Down*1.5,Down*1.5,50))
-        holoAlpha(LaserHolos[I,array][1,number],255*Down)
-    }else{
-        holoDelete(LaserHolos[I,array][1,number])
-        LaserHolos:remove(I)
+        if(DT > 0){
+            local Down = DT/0.5
+            
+            holoScale(LaserHolos[I,array][1,number],vec(Down*1.5,Down*1.5,50))
+            holoAlpha(LaserHolos[I,array][1,number],255*Down)
+        }else{
+            holoDelete(LaserHolos[I,array][1,number])
+            LaserHolos:remove(I)
+        }
     }
 }
 
@@ -1300,18 +1305,19 @@ for(I=1,RL_DelQueue:count()){
     
 
 #animate explosions
-
-for(I=1,ExplosionHolos:count()){
-    local DT = Time - ExplosionHolos[I,array][2,number]
-    
-    if(DT < 0.5){
-        local Up = DT/0.5
-        local Down = 1-Up
+if(changed(MS)){
+    for(I=1,ExplosionHolos:count()){
+        local DT = Time - ExplosionHolos[I,array][2,number]
         
-        holoScale(ExplosionHolos[I,array][1,number],Up*35*vec(1,1,1))
-        holoAlpha(ExplosionHolos[I,array][1,number],150*Down)
-    }else{
-        holoDelete(ExplosionHolos[I,array][1,number])
-        ExplosionHolos:remove(I)
+        if(DT < 0.5){
+            local Up = DT/0.5
+            local Down = 1-Up
+            
+            holoScale(ExplosionHolos[I,array][1,number],Up*35*vec(1,1,1))
+            holoAlpha(ExplosionHolos[I,array][1,number],150*Down)
+        }else{
+            holoDelete(ExplosionHolos[I,array][1,number])
+            ExplosionHolos:remove(I)
+        }
     }
 }
