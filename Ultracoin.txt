@@ -1159,7 +1159,7 @@ for(I=1,Rockets:count()){
         RL_DelQueue:pushArray(array(CurrRocket,Time+1))
         Rockets:remove(I)
         
-        if(Chair:isValid()){
+        if(Chair:isValid() & Chair:parent() == CurrRocket){
             Chair:deparent()
             Chair:setPos(CurrRocket:pos() - CurrRocket:forward() * 200)
             Chair:propDelete()
