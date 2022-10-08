@@ -1,64 +1,126 @@
-@name UltrakillCoinshot v8
-@persist CanHitCoin UseTf2Trail TargetNPCS FFA AllowedWeapons:array [Whitelist Blacklist]:table #settings
-@persist [Coins UsedCoins]:table LaserHolos:table HC CoinAmmo Tracer WepAmmo GroupName:string AntCore DebugHitReg
-@outputs Blacklist:table Whitelist:table
+@name UltrakillCoinshot v9 (ricochet) + bonus ultrakill rocket launcher (rocket riding)
+@persist UseTf2Trail LagCompensation TargetNPCS FFA CoinSpeed [Whitelist Blacklist]:table #settings
+@persist [Coins UsedCoins]:table LaserHolos:table HC CoinAmmo Tracer WepAmmo GroupName:string AntCore Debug
+@persist [Marksman Piercer FreezeFrame Feedbacker]:string
+@persist PiercerTime PiercerReload
+@persist RLReload Rockets:table RL_DelQueue:table Freeze Chair:entity Riding FreezeJuice
+@outputs Blacklist:table Whitelist:table FreezeJuice
 
 #commissioned by Spit Swapula (very big ultrakill fan)
-#Main contributor: Katsu
-#Other contributors: Heckteck, Goldenflare5643, Runic, Anane, Spit Swapula, Omni
+#Written by: Katsu (BUG REPORTS AT gmodcat#9416)
 
 Players = players()
 Time = systime()
 Seconds = round(Time,0)
+TickCompensation = tickInterval()*66.6 #dont touch
 
+######
+
+LagCompensation = owner():ping()/500   #unit: seconds
+
+#[
+big thing of note when using this e2:
+lag will always be an issue on multiplayer servers
+
+e2 is completely serverside, which means the coins location can dramatically differ from where it is on your screen
+depending on your ping and the speed of the coin 
+
+LagCompensation represents how many SECONDS in the past of the coins trajectory the e2 will move back the hitbox of the coin
+
+you can try setting it to your own value (or formula) by:
+1) enable debug mode
+2) continue aiming directly at the coin and shooting it
+3) use debug mode to line up the blue holo (the center of the hitbox you are adjusting with lag compensation)
+   with the line of red holos (how your shot was interpreted by the e2 after lag)
+
+https://i.imgur.com/zyX142y.jpeg <-----------
+]#
+    
 if(first()){
 #############################################################################
 ############################### E2 SETTINGS #################################
+    #[
+    v9 changes
+        +can now splitshot coin -> shoot the coin at its (apex) or (2.5 seconds or longer after its been launched)
+        +coin physics changed to match ultrakill's coin trajectory better
+        +added fistful of money (crowbar the coin)
+        +added piercer (hold right click with revolver and then left click)
+            (you cannot counter with piercer, i am lazy to implement this and i feel like its unfair cuz its easier 
+            to hit a piercer shot on someone elses coin)
+        +npc targeting in general made less buggy
+        +can now target drg base npcs
+        +cleaned up the debug information that gets printed to chat (annoying)
+        +improved lag compensation somewhat by implementing kinematic equations to calculate where the coin was x seconds in 
+            the past (based on your ping)
 
+        +added the swag rocket launcher (rideable rockets)
+        +coins prioritize rockets
+    ]#
+        
     UseTf2Trail = 1 #set this to 1 if you and the server have tf2 assets and wish to see a better looking trail on the coin.
-    Tracer = 1 # show tracer, turn off if distracting
+    Tracer = 1 # show non-coinshot tracer, turn off if distracting
     
     TargetNPCS = 1 #self explanatory
     FFA = 1 #if FFA is off, e2 will target only people within the whitelist, and the blacklist is disabled    
+
+    Marksman = "weapon_pistol"
+    Piercer = "weapon_357"
+    FreezeFrame = "remotecontroller" #weapons > wiremod > remotecontroller
+    Feedbacker = "weapon_crowbar"
     
-    AllowedWeapons = array("weapon_pistol", "weapon_357")
     local WhitelistNames = array() 
     local BlacklistNames = array() #no need to add your own name to this, the chip will exclude the owner automatically
-    
+
+    CoinSpeed = 200
+    #[
+    ultrakill's coin is finely tuned to v1's walkspeed
+    default gmod walkspeed is 200 u/s
+    if you plan on increasing your walkspeed, adjust this value accordingly
+    ]#
+        
     GroupName = "UltrakillCoinshot"
-    
     #[
     change this if some retard is using the datasignals to mess with the e2. 
     all e2s in this group can communicate with eachother and hit eachothers coins
     ]#
-    
-    DebugHitReg = 0
-    #yellow = actual coinpos
-    #green = coin hitbox center
-    #red = shot location
-    
-#############################################################################
-#############################################################################
-    BlacklistNames:pushString(owner():name())
 
+    
+    Debug = 0
+    #[
+    https://i.imgur.com/zyX142y.jpeg <-- GUIDE HERE
+    
+    YOU DO NO DAMAGE IN DEBUG MODE NOR CAN YOU COUNTER
+    
+    yellow holo = actual coin position
+    blue holo = coin hitbox center (lag compensation: trying to guess where the coin was on your screen)
+    
+    red holos = where your shot line intersected the sphere that is the hitbox of the coin (the e2 thinks you hit the coin)
+    black holos = how the e2 interpreted your shot line (the e2 thinks you DIDN'T hit the coin)
+        
+    VR = velocity reduction (damage reduction from victim's velocity)
+    DPR = dot product reduction (damage reduction from how well the victim was strafing the coin)
+    DFO = damage fall off (damage reduction from victim's distance to the coin)
+    ]#   
+    
+    #[
+    IF YOUR SERVER DOES NOT HAVE ANTCORE:
+    Damage will be dealt using props, which is unreliable and somewhat random
+    If the props do not do damage and you have falco's prop protection, uncheck Anti E2 Mingery in the settings (you gotta be admin)
+    ALSO the piercer will only work for ricochets (it will be there visually and do nothing else)
+    ]#
+#############################################################################
+#############################################################################
+    runOnKeys(owner(),1)
     runOnTick(1)
     propSpawnUndo(0)
     
-    function number weaponAllowed(W:entity){
-        local T = W:type()
-        foreach(K,V:string = AllowedWeapons){
-            if(V == T){
-                return 1   
-            }
-        }
-        
-        return 0
-    }
-    
-    function number hitScan(Pos1:vector,Pos2:vector){
+    function number hitScan(Pos1:vector,Pos2:vector,Filter:array){
         #function checks if something is in the way between two points in the world
         
-        rangerFilter(owner())
+        for(I=1,Filter:count()){
+            rangerFilter(Filter[I,entity])
+        }
+        
         for(I=1,Coins:count()){
             rangerFilter(Coins[I,array][1,entity])
         }
@@ -137,67 +199,264 @@ if(first()){
         local Midpoint = (InitHit+OuterHit)/2
         return array(1,InitHit,OuterHit,Midpoint)
     }
+    
+    function entity damageBeam(HoloNum,BeamStartPos:vector,Bounces,ShotType:string,Ignore:table){
+        local Victims = array()
+        local VictimsDist = array()
+        local RocketsExist = (Rockets:count() > 0)
         
-    function number uLTRAKILL(CoinIndex,Countered,CounterPos:vector){
-        local FirstCoin = Coins[CoinIndex,array][1,entity]
-        
-        FirstCoin:soundPlay("coin" + Coins:count(),0,"physics/metal/metal_solid_impact_hard5.wav")
-        soundPitch("coin" + Coins:count(),100)
-
-        holoDelete(Coins[CoinIndex,array][3,number])
-        FirstCoin:removeTrails()                    
-        FirstCoin:propNotSolid(1)            
-        UsedCoins:pushArray(Coins[CoinIndex,array])            
-        Coins:remove(CoinIndex)
-        
-        local LastPos = FirstCoin:pos()
-        local ShootPos = owner():shootPos()
-        
-        local TracerPos = Countered ? CounterPos : owner():shootPos()
-        HC++
-        holoCreate(HC)
-        holoPos(HC,TracerPos)
-        holoModel(HC,"models/props_c17/signpole001.mdl")
-        holoMaterial(HC,"models/debug/debugwhite")
-        holoDisableShading(HC,1)
-        holoScale(HC,vec(2,2,50))
-        holoClipEnabled(HC,1,1)
-        holoColor(HC,vec(241,207,61))   
+        if(ShotType == "counter"){
+            Victims = array(owner())
+            VictimsDist = array(1)            
+        }elseif(RocketsExist & !Riding){
+            for(I=1,Rockets:count()){
+                Victims:pushNumber(I)
+                local Distance = Rockets[I,array][1,entity]:pos():distance(BeamStartPos)
+                VictimsDist:pushNumber(Distance)
+            }
+        }else{
+            for(I=1,Players:count()){
+                local Distance = Players[I,entity]:pos():distance(BeamStartPos)
                 
-        local TX = -elevation(TracerPos,ang(0,0,0),LastPos) + 90
-        local TY = -bearing(TracerPos,ang(0,0,0),LastPos)
-        holoAng(HC,ang(TX,TY,0))
-        holoClip(HC,1,LastPos,-holoEntity(HC):up(),1) 
-        LaserHolos:pushArray(array(HC,Time + 1))
+                if( Distance < 5000
+                    & Players[I,entity]:isAlive()
+                    & hitScan(BeamStartPos,Players[I,entity]:toWorld(vec(0,0,60)),array()) 
+                    & !listCheck(Ignore,Players[I,entity]) ){
+                    if(FFA){
+                        if(!listCheck(Blacklist,Players[I,entity])){
+                            Victims:pushEntity(Players[I,entity])
+                            VictimsDist:pushNumber(Distance)
+                        }
+                    }else{
+                        if(listCheck(Whitelist,Players[I,entity])){
+                            Victims:pushEntity(Players[I,entity])
+                            VictimsDist:pushNumber(Distance)
+                        }
+                    }
+                }
+            }
+            
+            if(TargetNPCS){
+                findClearBlackList()
+                findClearWhiteList()
+                findIncludeClass("npc")
+                findIncludeClass("drg")
+                findInSphere(BeamStartPos,5000)
+                local NPCS = findToArray()
+                          
+                for(I=1,clamp(NPCS:count(),0,5)){ 
+                    #i just know someones gonna try this chip on the gmod equivalent of a doom II slaughter map
+                    #hopefully this stops the chip from frying
+                    #if not sorry lol
+                    
+                    local Distance = NPCS[I,entity]:pos():distance(BeamStartPos)
+                    if(hitScan(BeamStartPos,NPCS[I,entity]:toWorld(vec(0,0,30)),NPCS) 
+                        & !listCheck(Ignore,NPCS[I,entity])
+                        & NPCS[I,entity]:isAlive()
+                    ){
+                        Victims:pushEntity(NPCS[I,entity])
+                        VictimsDist:pushNumber(Distance)
+                    }
+                }
+            }
+        }
         
-        local BeamColor = Countered ? vec(255,0,0) : vec(241,207,61)
+        
+        if(RocketsExist){
+            local RI = VictimsDist:minIndex()
+            local RocketPos = Rockets[RI,array][1,entity]:pos()
+            
+            Rockets[RI,array][1,entity]:propDelete()
+            Rockets:remove(RI)  
+            holoDelete(holoIndex(Rockets[RI,array][2,entity]))
+            holoDelete(holoIndex(Rockets[RI,array][3,entity]))
+                                    
+            propSpawn("models/props_phx/ww2bomb.mdl",RocketPos,ang(0,0,0),1):propBreak()
+            
+            local TX = -elevation(BeamStartPos,ang(0,0,0),RocketPos)
+            local TY = -bearing(BeamStartPos,ang(0,0,0),RocketPos)
+            
+            holoAng(HoloNum,ang(TX+90,TY,0))
+                            
+            return noentity()
+        }elseif(Victims:count() <= 0){
+            if(ShotType == "fistfulofmoney"){
+                local Hitpos = owner():aimPos()+vec(0,0,10)-owner():eye()*5
+                local TX = -elevation(BeamStartPos,ang(0,0,0),Hitpos)
+                local TY = -bearing(BeamStartPos,ang(0,0,0),Hitpos)
+                
+                holoAng(HoloNum,ang(TX+90,TY,0))
+                
+                local N = nextClosestCoinIndex(BeamStartPos)
+                Coins[N,array][1,entity]:removeTrails()
+                Coins[N,array][1,entity]:setPos(Hitpos)
+                Coins[N,array][1,entity]:applyForce(Coins[N,array][1,entity]:mass() * vec(0,0,400))
+                Coins[N,array][2,number] = Time
+                if(UseTf2Trail){
+                    Coins[N,array][1,entity]:setTrails(4,0,1,"effects/beam_generic01",vec(225,255,255),150)
+                }else{
+                    Coins[N,array][1,entity]:setTrails(10,7,1,"trails/laser",vec(225,255,255),255)
+                }                      
+            }else{
+                local Hitpos = BeamStartPos + owner():forward()*random(0,1) + owner():right()*random(-1,1)
+                local TX = -elevation(BeamStartPos,ang(0,0,0),Hitpos)
+                local TY = -bearing(BeamStartPos,ang(0,0,0),Hitpos)
+                
+                holoAng(HoloNum,ang(TX+90,TY,0))
+            }
+            
+            return noentity()
+        }else{            
+            local ClosestIndex = VictimsDist:minIndex()
+            
+            local Victim = Victims[ClosestIndex,entity]
+            
+            local ExtraInfo = ""
+            
+            if(Victim:type() == "player"){
+                ExtraInfo = ExtraInfo + " |V: " + Victim:name()
+            }else{
+                ExtraInfo = ExtraInfo + " |V: " + Victim:type()
+            }     
+                                       
+            
+            local Hitpos = Victim:attachmentPos("head") == vec(0,0,0) ? Victim:toWorld(vec(0,0,30)) : Victim:attachmentPos("head")
+            local TX = -elevation(BeamStartPos,ang(0,0,0),Hitpos)
+            local TY = -bearing(BeamStartPos,ang(0,0,0),Hitpos)
+            
+            holoAng(HoloNum,ang(TX+90,TY,0))
+            holoClip(HoloNum,1,Hitpos,-holoEntity(HoloNum):up(),1) 
+            
+            if(ShotType == "fistfulofmoney"){
+                local N = nextClosestCoinIndex(BeamStartPos)
+                
+                Coins[N,array][1,entity]:setPos(Hitpos+vec(0,0,10)-owner():eye()*5)
+                Coins[N,array][1,entity]:applyForce(Coins[N,array][1,entity]:mass() * vec(0,0,400))
+                Coins[N,array][2,number] = Time                
+            }            
+            
+            if(AntCore){
+                local BaseDamage = 37.5*Bounces
+                
+                if(ShotType == "piercer"){
+                    BaseDamage = BaseDamage * 1.5
+                }
+                
+                local VictimVel = Victim:vel()
+
+                local CoinShotUV = (Hitpos - BeamStartPos):normalized()
+                local VictimVelUV = VictimVel:normalized()
+                local DP = abs(VictimVelUV:dot(CoinShotUV))
+                local Distance = Victim:pos():distance(BeamStartPos)
+                                
+                local DPR = (DP == 0) ? 0 : 1 - DP #dot product reduction
+                local VR = (clamp(owner():vel():length(),350,999999999999)-350)/250 #velocity reduction
+                local DFO = Distance < 3000 & Victim:isPlayer() ? 0 : clamp((Distance - 3000) / 2000,0,1)^2 #distance falloff
+                
+                local Damage = clamp(BaseDamage - BaseDamage * VR * DPR,0,150)*(1-DFO)
+                
+                    if(Debug){
+                        ExtraInfo = ExtraInfo + " |HP: " + round(Damage,2) + "\n"
+                        + "VR: " + round(VR,2) + " |DPR: " + round(DPR,2) + " |DFO: " +  round(DFO,2) " (" + round(Distance,2) + " distance)"
+                    }else{
+                        ExtraInfo = ExtraInfo + " |HP: " + round(Damage,2)                    
+                    }
+                    #ifdef boom(vector,number,number)
+                        boomCustom("bloodimpact",Victim:pos(),Damage,10)
+                    #else
+                    #endif
+                    
+                switch(ShotType){
+                    case "standard",
+                        printColor(vec(255,255,255),"+ ",vec(0,255,255),"RICOSHOT ",vec(255,255,255),"x" + Bounces + ExtraInfo)                    
+                    break
+                    
+                    case "piercer",
+                        printColor(vec(255,255,255),"+ ",vec(264,168,20),"ULTRA",vec(0,255,255),"RICOSHOT ",vec(255,255,255),"x" + Bounces + ExtraInfo)                                        
+                    break
+                }
+            }else{
+                #bottle (NO ANTCORE)
+                local BottleDist = BeamStartPos:distance(Hitpos)
+                
+                local BottlePos = (BottleDist > 400) ? Hitpos + (BeamStartPos - Hitpos):normalized()*400 : BeamStartPos
+                local Bottle = propSpawn("models/props_junk/glassjug01.mdl",BottlePos,ang(TX,TY,0),0)
+                Bottle:propGravity(0)
+                Bottle:propDrag(0)
+                Bottle:setMass(10*Bounces)
+                        
+                Bottle:applyForce(Bottle:forward()*(12225 +(100 * Bounces))*Bottle:mass())
+                
+                switch(ShotType){
+                    case "standard",
+                        printColor(vec(255,255,255),"+ ",vec(0,255,255),"RICOSHOT ",vec(255,255,255),"x" + Bounces + ExtraInfo)                    
+                    break
+                    
+                    case "piercer",
+                        printColor(vec(255,255,255),"+ ",vec(264,168,20),"ULTRA",vec(0,255,255),"RICOSHOT ",vec(255,255,255),"x" + Bounces + ExtraInfo)                                        
+                    break
+                }
+            }
+            return Victim
+        }           
+    }
+            
+    function void ricoshot(CoinIndex,ShotType:string,ShootPos:vector){
+        #setup
+        
+        local AlreadyHit = table()
+        local LastPos = ShootPos       
+        local Bounces = 0
+
+        local BeamColor = vec(0,0,0)    
+        switch(ShotType){
+            case "standard",
+                BeamColor = vec(241,207,61)               
+            break
+            
+            case "counter",
+                BeamColor = vec(255,0,0)              
+            break
+            
+            case "piercer",
+                BeamColor = vec(0,161,255)             
+            break                
+        }
+                        
+        local FirstBeamColor = ShotType == "counter" ? vec(241,207,61) : BeamColor #first beam of a counter is yellow, the rest are red
         HC++
         holoCreate(HC)
+        holoPos(HC,ShootPos)
         holoModel(HC,"models/props_c17/signpole001.mdl")
         holoMaterial(HC,"models/debug/debugwhite")
         holoDisableShading(HC,1)
         holoScale(HC,vec(2,2,50))
         holoClipEnabled(HC,1,1)
-        holoColor(HC,BeamColor)     
-        holoPos(HC,LastPos)
-
-        
-        LaserHolos:pushArray(array(HC,Time + 1))
-        
-        local Bounces = 1
+        holoColor(HC,FirstBeamColor)  
+        LaserHolos:pushArray(array(HC,Time + 1))  
+        #######################################################
+        #PROCESS COINS
         
         while(1){
-            local CoinIndex = nextClosestCoinIndex(LastPos)
-            
-            if(CoinIndex){ #jump to next coin
+            if(Bounces != 0){
+                CoinIndex = nextClosestCoinIndex(LastPos)                
+            }
+          
+            if(CoinIndex){ #process the next coin in the chain if there is one
                 Bounces++
                 
+                #get properties of coin and do sfx before we delete it
                 local CoinEnt = Coins[CoinIndex,array][1,entity]
                 local CoinPos = CoinEnt:pos()
-                    
+
+                local CoinZVel = CoinEnt:vel():z()
+                local CoinAirTime = Time - Coins[CoinIndex,array][2,number]
+                holoAlpha(Coins[CoinIndex,array][4,number],0)   
+                             
                 CoinEnt:soundPlay("coin"+Coins:count(),0,"physics/metal/metal_solid_impact_hard5.wav")
-                soundPitch("coin"+Coins:count(),10)
+                soundPitch("coin"+Coins:count(),100+3*Bounces)
                 
+                #delete coin
                 holoDelete(Coins[CoinIndex,array][3,number])
                 Coins[CoinIndex,array][1,entity]:removeTrails()
                 Coins[CoinIndex,array][1,entity]:propNotSolid(1)
@@ -209,10 +468,30 @@ if(first()){
                 local TY = -bearing(LastPos,ang(0,0,0),CoinPos)
                 holoAng(HC,ang(TX,TY,0))
                 holoClip(HC,1,CoinPos,-holoEntity(HC):up(),1) 
-    
+
                 LastPos = CoinPos 
                 
-                #new laser holo
+                #does this coin splitshot?
+                local SplitShot = (abs(CoinZVel) < 24 | CoinAirTime > 1.5) & ShotType == "standard"
+                                
+                if(SplitShot){
+                    HC++
+                    holoCreate(HC)
+                    holoPos(HC,LastPos)
+                    holoModel(HC,"models/props_c17/signpole001.mdl")
+                    holoMaterial(HC,"models/debug/debugwhite")
+                    holoDisableShading(HC,1)
+                    holoScale(HC,vec(2,2,50))
+                    holoClipEnabled(HC,1,1)
+                    holoColor(HC,BeamColor)
+                    LaserHolos:pushArray(array(HC,Time + 1))
+                    
+                    local NewVictim = damageBeam(HC,LastPos,Bounces,"standard",AlreadyHit)
+                    AlreadyHit:pushEntity(NewVictim)
+                }
+            
+                #laser holo to: (next coin)/(the victim if this is the final coin)
+                
                 HC++
                 holoCreate(HC)
                 holoPos(HC,LastPos)
@@ -222,130 +501,21 @@ if(first()){
                 holoScale(HC,vec(2,2,50))
                 holoClipEnabled(HC,1,1)
                 holoColor(HC,BeamColor)
-                
                 LaserHolos:pushArray(array(HC,Time + 1))
+                
             }else{
+                #aim the final laser at the victim and do damage
+                damageBeam(HC,LastPos,Bounces,ShotType,AlreadyHit)
                 break
             }
         }
-        
-
-        local Victims = table()
-        
-        if(Countered){
-            if(hitScan(LastPos,owner():pos()+vec(0,0,30))){
-                Victims:pushArray(array(owner(),1))
-            }
-        }else{        
-            for(I=1,Players:count()){
-                local Distance = Players[I,entity]:pos():distance(LastPos)
-                if(Distance < 5000 & hitScan(LastPos,Players[I,entity]:pos()+vec(0,0,30)) & Players[I,entity]:isAlive()){
-                    if(FFA){
-                        if(!listCheck(Blacklist,Players[I,entity])){
-                            Victims:pushArray(array(Players[I,entity],Distance))
-                        }
-                    }else{
-                        if(listCheck(Whitelist,Players[I,entity])){
-                            Victims:pushArray(array(Players[I,entity],Distance))
-                        }
-                    }
-                }
-            }
-            
-            if(TargetNPCS){
-                findClearWhiteList()
-                findIncludeClass("npc")
-                findInSphere(LastPos,1000000)
-                local NPCS = findToArray()
-
-                for(I=1,NPCS:count()){
-                    local Distance = NPCS[I,entity]:pos():distance(LastPos)
-                    if(hitScan(LastPos,NPCS[I,entity]:pos()+vec(0,0,30))){
-                        Victims:pushArray(array(NPCS[I,entity],Distance))
-                    }
-                }
-            }
-        }
-        
-                
-        if(Victims:count() <= 0){
-            if(!Countered){
-                print("TOSS: No victims found")
-            }
-            return 0
-        }else{    
-            local ClosestIndex = 1
-            for(I=1,Victims:count()){
-                if(Victims[I,array][2,number] < Victims[ClosestIndex,array][2,number]){
-                    ClosestIndex = I
-                }
-            }
-                    
-            local Victim = Victims[ClosestIndex,array][1,entity]
-            
-            if(!Countered){
-                printColor(vec(255,0,0),"RICO",vec(0,255,255),"SHOT x" + Bounces)
-            }
-            
-            if(Victim:type() == "player"){
-                print("Victim: " + Victim:name())
-            }else{
-                print("Victim: " + Victim:type())
-            }                    
-            
-            local Hitpos = Victim:toWorld(vec(0,0,30))
-            local TX = -elevation(LastPos,ang(0,0,0),Hitpos)
-            local TY = -bearing(LastPos,ang(0,0,0),Hitpos)
-            
-            holoAng(HC,ang(TX+90,TY,0))
-            holoClip(HC,1,Hitpos,-holoEntity(HC):up(),1) 
-            
-            
-            if(AntCore){
-                local BaseDamage = 37.5*Bounces
-                local VictimVel = Victim:vel()
-
-                local CoinShotUV = (Hitpos - LastPos):normalized()
-                local VictimVelUV = VictimVel:normalized()
-                local DP = abs(VictimVelUV:dot(CoinShotUV))
-                local Distance = Victim:pos():distance(LastPos)
-                                
-                local DPR = (DP == 0) ? 0 : 1 - DP #dot product reduction
-                local VR = (clamp(owner():vel():length(),350,999999999999)-350)/250 #velocity reduction
-                local DFO = Distance < 3000 & Victim:isPlayer() ? 0 : clamp((Distance - 3000) / 2000,0,1)^2 #distance falloff
-                
-                local Damage = clamp(BaseDamage - BaseDamage * VR * DPR,0,150)*(1-DFO)
-                
-                print("Final Damage: " + round(Damage,2) + "\n" + 
-                round(VR,2) + " VR | " + round(DPR,2) + " DPR | " + round(DFO,2) + " DFO (" + round(Distance,2) + " distance)")
-                
-                #ifdef boom(vector,number,number)
-                    boomCustom("bloodimpact",Victim:pos(),Damage,10)
-                #else
-                #endif
-                
-            }else{
-                #bottle (NO ANTCORE)
-                local BottleDist = LastPos:distance(Hitpos)
-                
-                local BottlePos = (BottleDist > 400) ? Hitpos + (LastPos - Hitpos):normalized()*400 : LastPos
-                local Bottle = propSpawn("models/props_junk/glassjug01.mdl",BottlePos,ang(TX,TY,0),0)
-                Bottle:propGravity(0)
-                Bottle:propDrag(0)
-                Bottle:setMass(10*Bounces)
-                        
-                Bottle:applyForce(Bottle:forward()*(12225 +(100 * Bounces))*Bottle:mass())
-                Bottle:setTrails(10,5,1,"trails/laser",vec(225,221,0),255)
-            }
-            
-            return 1
-        }        
+          
     }
     
     timer("reload",1)      
     CoinAmmo = 4
-    LHI = 1
-
+    FreezeJuice = 450
+    
     if(FFA){
         for(I=1,BlacklistNames:count()){
             local NewBlackListedPlayer = findPlayerByName(BlacklistNames[I,string])
@@ -354,6 +524,8 @@ if(first()){
                 hint(NewBlackListedPlayer:name(),10)
             }        
         }
+        Blacklist:pushEntity(owner())
+        hint(owner():name(),10)
         hint("[blacklisted:]",10)
         hint("[FFA MODE]",10)
     }else{
@@ -374,11 +546,10 @@ if(first()){
     #ifdef boom(vector,number,number)
         AntCore = 1
     #else 
-        print("This server does not have antcore.")
-        print("Damage will be dealt using props, which is unreliable and somewhat random")
+        print("This server does not have antcore. See details inside e2.")
     #endif  
     
-    if(DebugHitReg){
+    if(Debug){
         holoCreate(1) #hitbox center
         holoColor(1,vec(0,0,255))
         holoDisableShading(1,1)
@@ -408,59 +579,34 @@ if(first()){
     }
 }
 
-
-if(changed(Seconds)){
-    for(I=1,Coins:count()){
-        if(Seconds >= Coins[I,array][2,number]){
-            Coins[I,array][1,entity]:propDelete()
-            Coins:remove(I)
-        }
-    }
-    
-    for(I=1,UsedCoins:count()){
-        if(Seconds >= UsedCoins[I,array][2,number]){
-            UsedCoins[I,array][1,entity]:propDelete()
-            UsedCoins:remove(I)
-        }
-    }
-}
-
-if(CoinAmmo < 4){
-    timer("reload",3000)
-}else{
-    stoptimer("reload")
-}
-
-if(clk("reload")){    
-    if(CoinAmmo < 4){
-        CoinAmmo++
-        hint("+Coin, " + CoinAmmo + "/4",3)
-    }
-}
-
 ##############################################################
-
+# launch coin
+Weapon = owner():weapon()
+LMB = owner():keyAttack1()
 RMB = owner():keyAttack2()
 WepAmmo = owner():weapon():clip1()
+Shoot = !changed(Weapon) & changed(WepAmmo) & $WepAmmo < 0
 
-if(changed(RMB) & RMB & CoinAmmo > 0 & weaponAllowed(owner():weapon())){
+if(keyClk() & changed(RMB) & RMB & CoinAmmo > 0 & Weapon:type() == Marksman){
     concmd("pac_event coin")
     timer("flip",100)
 }
 
 if(clk("flip")){
     CanHitCoin = 0
-    CoinAmmo--
-    hint(CoinAmmo + "/4",2)
-    
+    if(!Debug){
+        CoinAmmo--
+        hint(CoinAmmo + "/4",2)
+        
+    }
     owner():soundPlay(1,0,"physics/metal/chain_impact_hard1.wav")
     soundVolume(1,0.3)
 
-    Coin = propSpawn("models/props_junk/PopCan01a.mdl",owner():shootPos()+owner():eye()*30-vec(0,0,20),ang(0,0,0),0)
+    Coin = propSpawn("models/props_junk/PopCan01a.mdl",owner():shootPos()+owner():eye()*30,ang(0,0,0),0)
     Coin:setMass(1)
-    Coin:propGravity(1.5)
-    Coin:applyForce(Coin:up() * 400)
-    Coin:applyForce(owner():vel() + owner():eye() * 600)
+    Coin:propDrag(0)
+    Coin:propNotSolid(1)
+    Coin:applyForce(owner():vel() + vec(0,0,1) * CoinSpeed + owner():eye() * CoinSpeed)
     Coin:applyTorque(Coin:owner():eyeAngles():right() * random(-1000, 1000))
     Coin:setAlpha(0)
     
@@ -470,7 +616,7 @@ if(clk("flip")){
     #endif
     
     if(UseTf2Trail){
-        Coin:setTrails(10,7,1,"effects/beam_generic01",vec(225,255,255),255)
+        Coin:setTrails(4,0,1,"effects/beam_generic01",vec(225,255,255),150)
     }else{
         Coin:setTrails(10,7,1,"trails/laser",vec(225,255,255),255)
     }        
@@ -478,85 +624,80 @@ if(clk("flip")){
     
     HC++
     holoCreate(HC)
-    holoModel(HC,"models/hunter/tubes/circle2x2.mdl")
-    holoMaterial(HC,"models/shiny")
-    holoColor(HC,vec(255,191,0))
-    holoScale(HC,vec(0.1,0.1,0.8))
+    holoModel(HC,"models/holograms/hq_cylinder.mdl")
+    holoMaterial(HC,"models/XQM//Deg360")
+    holoColor(HC,vec(247,203,52))
+    holoScale(HC,vec(0.25,0.25,0.05))
     holoParent(HC,Coin)
     holoPos(HC,Coin:toWorld(vec(0,0,0)))
+    holoDisableShading(HC,1)
+
+    HC++
+    holoCreate(HC)
+    holoModel(HC,"models/holograms/icosphere.mdl")
+    holoMaterial(HC,"models/debug/debugwhite")
+    holoColor(HC,vec(255,255,0))
+    holoScale(HC,-0.4*vec(1,1,1))
+    holoParent(HC,Coin)
+    holoPos(HC,Coin:toWorld(vec(0,0,0)))
+    holoDisableShading(HC,1)
     
-    Coins:pushArray(array(Coin,Seconds+7,HC))
-    stoptimer("Antispam")
-    timer("Antispam",400)
+    Coins:pushArray(array(Coin,Time,HC-1,HC))
 }
 
 #############################
-local Weapon = owner():weapon()
+# shoot coin
 
-if(!changed(Weapon) & changed(WepAmmo) & $WepAmmo < 0 & weaponAllowed(Weapon)){    
+if(Shoot & (Weapon:type() == Marksman | Weapon:type() == Piercer) & !PiercerTime){    
     local HitCoin = 0
     
-    if(CanHitCoin){
-        findClearWhiteList()
-        findIncludeModel("models/props_junk/PopCan01a.mdl")
-        findInSphere(owner():pos(),9999999999999)
-        local Found = findToArray()
+    findClearWhiteList()
+    findIncludeModel("models/props_junk/PopCan01a.mdl")
+    findInSphere(owner():pos(),9999999999999)
+    local Found = findToArray()
     
-        for(I=1,Found:count()){
-            local CurrCoin = Found[I,entity]
-            local LagCompPos = CurrCoin:pos() - CurrCoin:vel():normalized()*100
-            
-            local RHS = rayHitSphere(owner():shootPos(),owner():eye(),LagCompPos,47.5)
-            local Hit = RHS[1,number] & hitScan(owner():shootPos(),RHS[2,vector])
-            
-            if(Hit){
-                local CoinOwner = CurrCoin:owner()      
-                if(CurrCoin:owner() == owner()){ #our coin
-                    uLTRAKILL(findInTable(Coins,CurrCoin),0,vec(0,0,0))          
-                }else{ #countered someone
-                    if(FFA){
-                        if(!listCheck(Blacklist,CoinOwner)){
-                            printColor(vec(255,140,0),"COUNTER",vec(0,255,255),"RICOSHOT")
-                            dsSend("counter",GroupName,array(CoinOwner,CurrCoin,owner()))
-                        }
-                    }else{
-                        if(listCheck(Whitelist,CoinOwner)){
-                            printColor(vec(255,140,0),"COUNTER",vec(0,255,255),"RICOSHOT")
-                            dsSend("counter",GroupName,array(CoinOwner,CurrCoin,owner()))
-                        }
+    for(I=1,Found:count()){
+        local CurrCoin = Found[I,entity]
+        
+        #calculate earlier position along perfect object trajectory parabola using kinematics
+        local LagCompPos = CurrCoin:pos() - CurrCoin:vel()*LagCompensation - 0.5*vec(0,0,-gravity())*LagCompensation^2
+        
+        local RHS = rayHitSphere(owner():shootPos(),owner():eye(),LagCompPos,20)
+        local Hit = RHS[1,number] & hitScan(owner():shootPos(),RHS[2,vector],array())
+        
+        if(Hit){
+            local CoinOwner = CurrCoin:owner()      
+            if(CurrCoin:owner() == owner()){
+                ricoshot(findInTable(Coins,CurrCoin),"standard",owner():shootPos())          
+            }elseif(!Debug){
+                if(FFA){
+                    if(!listCheck(Blacklist,CoinOwner)){
+                        printColor(vec(255,140,0),"COUNTER",vec(0,255,255),"RICOSHOT")
+                        dsSend("counter",GroupName,array(CoinOwner,CurrCoin,owner()))
+                    }
+                }else{
+                    if(listCheck(Whitelist,CoinOwner)){
+                        printColor(vec(255,140,0),"COUNTER",vec(0,255,255),"RICOSHOT")
+                        dsSend("counter",GroupName,array(CoinOwner,CurrCoin,owner()))
                     }
                 }
-                
-                if(DebugHitReg){    
-                    holoPos(1,LagCompPos)
-                    holoPos(2,CurrCoin:pos())
-                    holoPos(3,RHS[2,vector])
-                    holoPos(4,RHS[3,vector])    
-                    holoPos(5,RHS[4,vector])
-                }
+            }
             
-                print(RHS[3,vector]:distance(CurrCoin:pos()),CurrCoin:vel():length())
-                                    
-                HitCoin = 1
-                
-                break
+            if(Debug){  
+                holoPos(1,LagCompPos)
+                holoPos(2,CurrCoin:pos())                     
+                holoPos(3,RHS[2,vector])
+                holoPos(4,RHS[3,vector])    
+                holoPos(5,RHS[4,vector])
+                for(I=3,5){
+                    holoColor(I,vec(255,0,0))
+                }
             }
-    
+                                            
+            HitCoin = 1
+            
+            break
         }
-        
-        #[ #aim assist angle [depreciated]
-        findInCone(owner():shootPos(),owner():eye(),9999999999999,AimAssistAng)
-        local Found = findToArray()
-        
-        for(I=1,Found:count()){
-            local CoinIndex = findInTable(Coins,Found[I,entity])
-            if(CoinIndex){
-                print("***COIN HIT***")
-                            
-                uLTRAKILL(CoinIndex)
-            }
-        }
-        ]#
     }
     
     if(!HitCoin & Tracer){
@@ -572,10 +713,264 @@ if(!changed(Weapon) & changed(WepAmmo) & $WepAmmo < 0 & weaponAllowed(Weapon)){
         holoColor(HC,vec(241,207,61))
                
         LaserHolos:pushArray(array(HC,Time + 0.5))
+        
+        if(Debug){
+            local CurrCoin = Found[1,entity]
+            local LagCompPos = CurrCoin:pos() - CurrCoin:vel()*LagCompensation - 0.5*vec(0,0,-gravity())*LagCompensation^2
+            
+            holoPos(1,LagCompPos)
+            holoPos(2,CurrCoin:pos()) 
+            holoPos(3,owner():shootPos())
+            holoPos(4,owner():shootPos()+owner():eye()*50)
+            holoPos(5,owner():shootPos()+owner():eye()*100)
+                        
+            for(I=3,5){
+                holoColor(I,vec(0,0,0))
+            }
+        }
     }
 }
 
-#############################################
+########################################################
+#feedbacker coin
+
+
+if(keyClk() & changed(LMB) & LMB & Weapon:type() == Feedbacker){    
+    local HitCoin = 0
+    
+    findClearWhiteList()
+    findIncludeModel("models/props_junk/PopCan01a.mdl")
+    findInSphere(owner():pos(),9999999999999)
+    local Found = findToArray()
+    
+    for(I=1,Found:count()){
+        local CurrCoin = Found[I,entity]
+        
+        #calculate earlier position along perfect object trajectory parabola using kinematics
+        local LagCompPos = CurrCoin:pos() - CurrCoin:vel()*LagCompensation - 0.5*vec(0,0,-gravity())*LagCompensation^2
+        
+        local RHS = rayHitSphere(owner():shootPos(),owner():eye(),LagCompPos,30)
+        local Hit = RHS[1,number] & hitScan(owner():shootPos(),RHS[2,vector],array()) & (CurrCoin:pos():distance(owner():shootPos()) < 100)
+        
+        if(Hit){
+            local CoinOwner = CurrCoin:owner()      
+            if(CurrCoin:owner() == owner()){
+                HC++
+                holoCreate(HC)
+                holoPos(HC,owner():shootPos())
+                holoModel(HC,"models/props_c17/signpole001.mdl")
+                holoMaterial(HC,"models/debug/debugwhite")
+                holoDisableShading(HC,1)
+                holoScale(HC,vec(2,2,50))
+                holoClipEnabled(HC,1,1)
+                holoColor(HC,vec(241,207,61))
+                LaserHolos:pushArray(array(HC,Time + 1))
+                
+                damageBeam(HC,owner():shootPos(),2,"fistfulofmoney",table())     
+            }
+     
+            break
+        }
+    }
+}
+
+
+########################################################
+#piercer
+
+if(keyClk()){
+    if(changed(RMB) & Weapon:type() == Piercer & !PiercerReload){
+        if(RMB){
+            PiercerTime = Time
+            owner():soundPlay("piercerCharge",0,"ambient/energy/force_field_loop1.wav")
+        }else{
+            PiercerTime = 0
+            soundStop("piercerCharge")
+        }
+    }
+}
+
+if(Weapon:type() == Piercer){
+    if(RMB & !PiercerReload){
+        local DT = Time - PiercerTime
+        local Up = clamp(DT/0.75,0,1)
+        
+        soundPitch("piercerCharge",100*Up)
+        
+        local Ready = (Up == 1) & PiercerTime
+        
+        if(changed(Ready) & Ready){
+            hint("piercer ready",1)
+        }
+        
+        if(Ready & Shoot){
+            PiercerReload = Time
+            PiercerTime = 0
+            soundStop("piercerCharge")
+                     
+            local HitCoin = 0
+            
+            findClearWhiteList()
+            findIncludeModel("models/props_junk/PopCan01a.mdl")
+            findInSphere(owner():pos(),9999999999999)
+            local Found = findToArray()
+            
+            for(I=1,Found:count()){
+                local CurrCoin = Found[I,entity]
+                
+                #calculate earlier position along perfect object trajectory parabola using kinematics
+                local LagCompPos = CurrCoin:pos() - CurrCoin:vel()*LagCompensation - 0.5*vec(0,0,-gravity())*LagCompensation^2
+                
+                local RHS = rayHitSphere(owner():shootPos(),owner():eye(),LagCompPos,20)
+                local Hit = RHS[1,number] & hitScan(owner():shootPos(),RHS[2,vector],array())
+                
+                if(Hit){
+                    local CoinOwner = CurrCoin:owner()      
+                    if(CurrCoin:owner() == owner()){
+                        ricoshot(findInTable(Coins,CurrCoin),"piercer",owner():shootPos())          
+                    }elseif(!Debug){
+                        if(FFA){
+                            if(!listCheck(Blacklist,CoinOwner)){
+                                printColor(vec(255,140,0),"COUNTER",vec(0,255,255),"RICOSHOT")
+                                dsSend("counter",GroupName,array(CoinOwner,CurrCoin,owner()))
+                            }
+                        }else{
+                            if(listCheck(Whitelist,CoinOwner)){
+                                printColor(vec(255,140,0),"COUNTER",vec(0,255,255),"RICOSHOT")
+                                dsSend("counter",GroupName,array(CoinOwner,CurrCoin,owner()))
+                            }
+                        }
+                    }
+                    
+                    if(Debug){  
+                        holoPos(1,LagCompPos)
+                        holoPos(2,CurrCoin:pos())                     
+                        holoPos(3,RHS[2,vector])
+                        holoPos(4,RHS[3,vector])    
+                        holoPos(5,RHS[4,vector])
+                        for(I=3,5){
+                            holoColor(I,vec(255,0,0))
+                        }
+                    }
+                                                    
+                    HitCoin = 1
+                    
+                    break
+                }
+            }
+            
+            if(!HitCoin){
+                HC++
+                holoCreate(HC)
+                holoPos(HC,owner():shootPos() + owner():eye()*20)
+                holoAng(HC,owner():eyeAngles() + ang(90,0,0))
+                holoModel(HC,"models/props_c17/signpole001.mdl")
+                holoMaterial(HC,"models/debug/debugwhite")
+                holoDisableShading(HC,1)
+                holoScale(HC,vec(2,2,50))
+                holoClipEnabled(HC,1,1)
+                holoColor(HC,vec(0,161,255))
+                       
+                LaserHolos:pushArray(array(HC,Time + 0.5))
+                
+                #ultrakill piercer shoots 6 shots, if 4 hit the next 2 pierce into the next enemy
+                #im lazy so first target takes your revolver's damage + 120 and second target takes 80 damage
+                #this is because hl2 revolver does 40 dmg so shot 1 is 40*4 and shot 2 is 40*2
+                
+                rangerFilter(owner())
+                local R = rangerOffset(999999,owner():shootPos(),owner():eye())
+                local REnt = R:entity()
+                if(REnt:isAlive()){
+                    #ifdef boom(vector,number,number)
+                        boomCustom("bloodimpact",Victim:pos(),120,10)
+                    #else
+                    #endif
+                }
+                
+                rangerFilter(owner())
+                rangerFilter(REnt)
+                local R2 = rangerOffset(999999,owner():shootPos(),owner():eye())
+                local R2Ent = R2:entity()
+                if(R2Ent:isAlive()){
+                    #ifdef boom(vector,number,number)
+                        boomCustom("bloodimpact",R2Ent:pos(),80,10)
+                    #else
+                    #endif
+                }
+                
+                if(Debug){
+                    local CurrCoin = Found[1,entity]
+                    local LagCompPos = CurrCoin:pos() - CurrCoin:vel()*LagCompensation - 0.5*vec(0,0,-gravity())*LagCompensation^2
+                    
+                    holoPos(1,LagCompPos)
+                    holoPos(2,CurrCoin:pos()) 
+                    holoPos(3,owner():shootPos())
+                    holoPos(4,owner():shootPos()+owner():eye()*50)
+                    holoPos(5,owner():shootPos()+owner():eye()*100)
+                                
+                    for(I=3,5){
+                        holoColor(I,vec(0,0,0))
+                    }
+                }
+            }
+        }
+    }
+}else{
+    PiercerTime = 0
+    soundStop("piercerCharge")    
+}
+
+if(PiercerReload){
+    local PRDT = Time - PiercerReload
+    
+    if(PRDT > 5){
+        PiercerReload = 0
+        hint("piercer reloaded",1)
+    }
+}
+
+###############################################
+# countering
+
+if(dsClk("counter")){
+    local CounterData = dsGetArray()
+    
+    if(CounterData[1,entity] == owner()){ #we got countered
+        local CoinIndex = findInTable(Coins,CounterData[2,entity])
+        
+        if(CoinIndex){
+            print("countered by " + CounterData[3,entity]:name())
+            ricoshot(CoinIndex,"counter",CounterData[3,entity]:shootPos())
+        }
+    }
+}
+
+###############################################
+# coin goes away upon hitting ground 
+# also flash on splitshot window
+
+for(I=1,Coins:count()){    
+    local CurrCoin = Coins[I,array][1,entity]
+    
+    local ZVel = CurrCoin:vel():z() - gravity()*LagCompensation #calculate earlier velocity to account for ping
+    local SSW = (abs(ZVel) < 30) 
+    if(SSW){
+        holoAlpha(Coins[I,array][4,number],255)
+    }else{
+        holoAlpha(Coins[I,array][4,number],0)
+    }
+    
+    rangerFilter(CurrCoin)
+    rangerFilter(owner())
+    
+    local R = rangerOffset(10,CurrCoin:pos(),vec(0,0,-1))
+    if(R:hit()){
+        CurrCoin:propDelete()
+        Coins:remove(I)
+    }
+}
+    
+#animate beams
 
 for(I=1,LaserHolos:count()){
     local DT = LaserHolos[I,array][2,number] - Time
@@ -591,41 +986,243 @@ for(I=1,LaserHolos:count()){
     }
 }
 
-###############################################
-# coin goes away upon hitting ground
+# delete coins that are too old
 
-for(I=1,Coins:count()){
-    local CurrCoin = Coins[I,array][1,entity]
-    rangerFilter(CurrCoin)
-    rangerFilter(owner())
-    
-    local R = rangerOffset(10,CurrCoin:pos(),vec(0,0,-1))
-    if(R:hit()){
-        CurrCoin:propDelete()
-        Coins:remove(I)
+if(changed(Seconds)){
+    for(I=1,Coins:count()){
+        if((Time - Coins[I,array][2,number]) > 7){
+            Coins[I,array][1,entity]:propDelete()
+            Coins:remove(I)
+        }
     }
-}
-
-###############################################
-# countering
-
-if(dsClk("counter")){
-    local CounterData = dsGetArray()
     
-    if(CounterData[1,entity] == owner()){ #we got countered
-        local CoinIndex = findInTable(Coins,CounterData[2,entity])
-        
-        if(CoinIndex){
-            print("countered by " + CounterData[3,entity]:name())
-            uLTRAKILL(findInTable(Coins,CounterData[2,entity]),1,CounterData[3,entity]:shootPos())
+    for(I=1,UsedCoins:count()){
+        if((Time - UsedCoins[I,array][2,number]) > 7){
+            UsedCoins[I,array][1,entity]:propDelete()
+            UsedCoins:remove(I)
         }
     }
 }
 
-################################################
-#### TeenyWeeny Antispam. Greetz by Runic. #####
-################################################
-
-if(clk("Antispam")){
-    CanHitCoin = 1
+# coin recharge
+if(CoinAmmo < 4){
+    timer("reload",3000)
+}else{
+    stoptimer("reload")
 }
+
+if(clk("reload")){    
+    if(CoinAmmo < 4){
+        CoinAmmo++
+        hint("+Coin, " + CoinAmmo + "/4",3)
+    }
+}
+
+
+##############################################
+#rocket launcher
+
+if(keyClk()){
+    if(changed(LMB) & LMB  & Weapon:type() == FreezeFrame & !RLReload & propCanCreate()){
+        local NewRocket = propSpawn("models/hunter/blocks/cube025x025x025.mdl",owner():shootPos(),owner():eyeAngles(),1)
+        NewRocket:setMass(999999)
+        NewRocket:setAlpha(0)
+        NewRocket:propNotSolid(1)
+        NewRocket:propStatic(1)
+        
+        if(UseTf2Trail){
+            NewRocket:setTrails(12,0,0.1,"effects/beam_generic01",vec(225,192,0),150)
+        }else{
+            NewRocket:setTrails(50,7,0.1,"trails/laser",vec(225,192,0),255)
+        }
+        
+        HC++
+        local H1 = holoCreate(HC)
+        holoParent(HC,NewRocket)
+        holoPos(HC,NewRocket:toWorld(vec(0,0,0)))
+        holoAng(HC,NewRocket:toWorld(ang(0,0,0)))
+        holoModel(HC,"models/props_phx/amraam.mdl")
+        holoColor(HC,vec(254,100,4))
+        holoDisableShading(HC,1)
+        holoScale(HC,vec(0.15,0.6,0.6))
+        
+        HC++    
+        local H2 = holoCreate(HC)
+        holoParent(HC,NewRocket)
+        holoPos(HC,NewRocket:toWorld(vec(0,0,5.5)))
+        holoAng(HC,NewRocket:toWorld(ang(0,180,0)))
+        holoModel(HC,"hq_sphere")
+        holoScale(HC,vec(-1.7,-1.7,-1.7))
+        holoMaterial(HC,"models/debug/debugwhite")
+        holoColor(HC,vec4(0,161,255,150*Freeze))
+        holoDisableShading(HC,1)
+        
+        Rockets:pushArray(array(NewRocket,H1,H2))
+    
+        owner():soundPlay(4,2,"weapons/quake_rpg_fire_remastered.wav")  
+        soundVolume(4,0.1)
+        
+        RLReload = Time
+    }
+    
+    if(changed(RMB) & RMB & Weapon:type() == FreezeFrame){
+        Freeze = !Freeze
+        
+        if(Freeze){
+            hint("frozen",1)
+            for(I=1,Rockets:count()){
+                Rockets[I,array][3,entity]:setAlpha(150)
+            }
+        }else{
+            hint("unfrozen",1)
+            for(I=1,Rockets:count()){
+                Rockets[I,array][3,entity]:setAlpha(0)
+            }            
+        }
+    }
+}
+
+if(Freeze){
+    FreezeJuice = clamp(FreezeJuice - 1*TickCompensation,0,450)
+}else{
+    FreezeJuice = clamp(FreezeJuice + 1*TickCompensation,0,450)
+    local Full = (FreezeJuice == 450)
+    if(changed(Full) & Full){
+        hint("freezeframe fully refilled",3)
+    }
+}
+
+if(FreezeJuice < 1){
+    Freeze = 0 
+    hint("unfrozen",1)
+    for(I=1,Rockets:count()){
+        Rockets[I,array][3,entity]:setAlpha(0)
+    }    
+}
+
+if(RLReload){
+    local DT = Time - RLReload
+ 
+    if(DT > 1){
+        RLReload = 0
+    }
+}
+
+local CloseArray = array()
+for(I=1,Rockets:count()){
+    local CurrRocket = Rockets[I,array][1,entity]
+    
+    if(!CurrRocket:isValid()){
+        Rockets:remove(I)
+    }
+    
+    local RocketPos = CurrRocket:pos()    
+    local OPos = owner():pos()
+    local PDist = OPos:distance(RocketPos)
+    CloseArray[I,number] = PDist
+    
+    if(!Freeze){    
+        CurrRocket:setPos(RocketPos+CurrRocket:forward()*37.5*TickCompensation)
+    }        
+
+    rangerFilter(owner())
+    rangerFilter(CurrRocket)
+    local Ranger = rangerOffset(50,RocketPos,CurrRocket:forward())
+    
+    if(Ranger:hit()){
+        if(Ranger:entity():isAlive()){
+            if(Ranger:entity():isOnGround()){
+                propSpawn("models/props_phx/ww2bomb.mdl",RocketPos,ang(0,0,0),1):propBreak()
+            }else{
+                propSpawn("models/props_phx/torpedo.mdl",RocketPos,ang(0,0,0),1):propBreak()        
+            }
+        }
+        
+        if(PDist < 120){
+            LaunchVel = (OPos - RocketPos):normalized()*1000
+
+            #ifdef entity:plySetPos(vector)
+                owner():plySetPos(owner():pos()+vec(0,0,5))
+            #else
+            #endif
+
+            
+            #ifdef entity:plyApplyForce(vector)
+                owner():plyApplyForce(LaunchVel)
+            #else
+            #endif
+        }
+                        
+        holoDelete(holoIndex(Rockets[I,array][2,entity]))
+        holoDelete(holoIndex(Rockets[I,array][3,entity]))
+        CurrRocket:propStatic(1)
+        RL_DelQueue:pushArray(array(CurrRocket,Time+1))
+        Rockets:remove(I)
+        
+        if(Chair:isValid()){
+            Chair:deparent()
+            Chair:setPos(CurrRocket:pos() - CurrRocket:forward() * 200)
+            Chair:propDelete()
+        }
+    }
+    if(Shoot){
+        local RHS = rayHitSphere(owner():shootPos(),owner():eye(),RocketPos,20)
+        local Hit = RHS[1,number] & hitScan(owner():shootPos(),RHS[2,vector],array())
+        
+        if(Hit){
+            propSpawn("models/props_phx/ww2bomb.mdl",RocketPos,ang(0,0,0),1):propBreak()
+            holoDelete(holoIndex(Rockets[I,array][2,entity]))
+            holoDelete(holoIndex(Rockets[I,array][3,entity]))
+            CurrRocket:propDelete()
+            Rockets:remove(I)
+        }
+    }
+}
+
+local ClRI = CloseArray:minIndex()
+local ClRD = CloseArray[ClRI,number]
+if(ClRI != 0){
+    local ClosestRocket = Rockets[ClRI,array][1,entity]
+
+    if(Riding){
+        local W = owner():keyPressed("W")
+        local A = owner():keyPressed("A")
+        local S = owner():keyPressed("S")
+        local D = owner():keyPressed("D")
+        
+             
+        if(W|A|S|D){
+            local Orientation = quat(ClosestRocket)
+            Orientation = Orientation 
+                * qRotation(vec(0,1,0),0.6*TickCompensation*(W-S))
+                * qRotation(vec(0,0,1),0.6*TickCompensation*(A-D))
+            
+            ClosestRocket:setAng(Orientation:toAngle())      
+        }
+    }else{
+        if(ClRD < 50 & !owner():isOnGround() & Freeze){
+            Riding = 1
+            Chair = seatSpawn("models/nova/airboat_seat.mdl",ClosestRocket:toWorld(vec(0,0,30)),ClosestRocket:toWorld(ang(0,-90,0)),1)
+            Chair:setAlpha(0)
+            Chair:parentTo(ClosestRocket)
+            Chair:use()
+        }        
+    }
+}
+
+Seated = owner():inVehicle()
+if(Riding & changed(Seated) & !Seated){
+    Riding = 0
+    if(Chair:isValid()){
+        Chair:propDelete()
+    }
+}
+
+for(I=1,RL_DelQueue:count()){
+    if(Time >= RL_DelQueue[I,array][2,number]){
+       RL_DelQueue[I,array][1,entity]:propDelete()
+       RL_DelQueue:remove(I)
+    }
+}
+    
+
