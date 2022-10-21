@@ -45,7 +45,7 @@ if(first()){
         +added sfx to rocket launcher
     ]#
         
-    UseTf2Trail = 1 #set this to 1 if you and the server have tf2 assets and wish to see a better looking trail on the coin.
+    UseTf2Trail = 0 #set this to 1 if you and the server have tf2 assets and wish to see a better looking trail on the coin.
     Tracer = 1 # show non-coinshot tracer, turn off if distracting
     
     TargetNPCS = 1 #self explanatory
